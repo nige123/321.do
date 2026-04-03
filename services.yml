@@ -1,5 +1,18 @@
 services:
 
+  321.web:
+    repo: /home/s3/321.do
+    branch: master
+    bin: bin/321.pl
+    restart: hypnotoad
+    port: 9999
+    logs:
+      stdout: /tmp/321.do.stdout.log
+      stderr: /tmp/321.do.stderr.log
+      ubic: /tmp/321.do.ubic.log
+    env:
+      MOJO_MODE: production
+
   123.api:
     repo: /home/s3/api.123.do
     branch: master
