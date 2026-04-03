@@ -80,7 +80,7 @@ server {
     ssl_certificate     /etc/letsencrypt/live/$domain/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
 
-    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_protocols TLSv1.2;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
 
@@ -113,8 +113,8 @@ say "Symlinked $nginx_link";
 # --- Step 6: SSL cert via certbot ---
 unless (-f "/etc/letsencrypt/live/$domain/fullchain.pem") {
     say "--- Obtaining SSL certificate ---";
-    system("certbot certonly --nginx -d $domain --non-interactive --agree-tos -m admin\@$domain") == 0
-        or warn "certbot failed — run manually: sudo certbot certonly --nginx -d $domain\n";
+    system("certbot certonly --standalone -d $domain --non-interactive --agree-tos -m admin\@$domain") == 0
+        or warn "certbot failed — run manually: sudo certbot certonly --standalone -d $domain\n";
 }
 else {
     say "SSL cert already exists";
