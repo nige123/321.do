@@ -37,7 +37,7 @@ Token from `DEPLOY_TOKEN` env var or `deploy_token.txt`.
 ## Development
 
 ```bash
-perl bin/deploy.pl daemon -l http://127.0.0.1:9999
+perl bin/321.pl daemon -l http://127.0.0.1:9999
 prove -lr t
 ```
 

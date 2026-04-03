@@ -7,7 +7,7 @@ use Path::Tiny qw(path);
 $ENV{DEPLOY_TOKEN} = 'test-token-123';
 $ENV{MOJO_MODE} = 'production';
 
-my $t = Test::Mojo->new(Mojo::File->new('bin/deploy.pl'));
+my $t = Test::Mojo->new(Mojo::File->new('bin/321.pl'));
 
 my $auth = { Authorization => 'Bearer test-token-123' };
 

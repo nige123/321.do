@@ -6,7 +6,7 @@ use Test::Mojo;
 # Set a test token
 $ENV{DEPLOY_TOKEN} = 'test-token-123';
 
-my $t = Test::Mojo->new(Mojo::File->new('bin/deploy.pl'));
+my $t = Test::Mojo->new(Mojo::File->new('bin/321.pl'));
 
 # Health endpoint is public — no auth needed
 $t->get_ok('/health')

@@ -219,7 +219,7 @@ body {
     background: var(--bg-0);
     color: var(--text-0);
     font-family: var(--sans);
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.5;
     min-height: 100vh;
     overflow-x: hidden;
@@ -259,7 +259,7 @@ body::after {
 .topbar-logo {
     font-family: var(--mono);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 17px;
     letter-spacing: -0.5px;
     color: var(--green);
     text-decoration: none;
@@ -294,7 +294,7 @@ body::after {
 
 .topbar-nav a {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--text-2);
     text-decoration: none;
@@ -310,7 +310,7 @@ body::after {
 
 .health-badge {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     padding: 3px 10px;
     border-radius: 3px;
@@ -344,14 +344,14 @@ body::after {
 
 .page-title {
     font-family: var(--mono);
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 700;
     letter-spacing: -0.5px;
     margin-bottom: 4px;
 }
 
 .page-subtitle {
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text-2);
 }
 
@@ -407,7 +407,7 @@ body::after {
 
 .svc-name {
     font-family: var(--mono);
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     letter-spacing: -0.3px;
 }
@@ -443,7 +443,7 @@ body::after {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 4px 12px;
-    font-size: 12px;
+    font-size: 14px;
     margin-bottom: 16px;
 }
 
@@ -452,7 +452,7 @@ body::after {
     font-family: var(--mono);
     font-weight: 500;
     text-transform: uppercase;
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 0.5px;
     padding-top: 1px;
 }
@@ -460,7 +460,7 @@ body::after {
 .svc-meta dd {
     color: var(--text-1);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .svc-actions {
@@ -473,7 +473,7 @@ body::after {
 /* Buttons */
 .btn {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.3px;
     text-transform: uppercase;
@@ -532,7 +532,7 @@ body::after {
     border-radius: 4px;
     padding: 12px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.7;
     max-height: 200px;
     overflow-y: auto;
@@ -573,7 +573,7 @@ body::after {
 
 .log-type-tab {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     padding: 4px 10px;
     border: none;
@@ -595,7 +595,7 @@ body::after {
 
 .log-search input {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
     padding: 5px 10px;
     background: var(--bg-0);
     border: 1px solid var(--border);
@@ -616,7 +616,7 @@ body::after {
 .log-content {
     padding: 12px 14px;
     font-family: var(--mono);
-    font-size: 11.5px;
+    font-size: 13px;
     line-height: 1.65;
     max-height: 500px;
     overflow-y: auto;
@@ -654,7 +654,7 @@ body::after {
 
 .analysis-card h3 {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -673,7 +673,7 @@ body::after {
     padding: 6px 0;
     border-bottom: 1px solid var(--border);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .stat-row:last-child { border-bottom: none; }
@@ -697,7 +697,7 @@ body::after {
 
 .status-code-chip {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     padding: 4px 10px;
     border-radius: 3px;
@@ -738,7 +738,7 @@ body::after {
 
 .detail-info h2 {
     font-family: var(--mono);
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     margin-bottom: 16px;
     display: flex;
@@ -750,7 +750,7 @@ body::after {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 8px 14px;
-    font-size: 12px;
+    font-size: 14px;
     margin-bottom: 20px;
 }
 
@@ -759,7 +759,7 @@ body::after {
     font-family: var(--mono);
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 0.5px;
     padding-top: 2px;
 }
@@ -767,13 +767,13 @@ body::after {
 .detail-meta dd {
     color: var(--text-1);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
     word-break: break-all;
 }
 
 .section-title {
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
     letter-spacing: -0.3px;
     margin-bottom: 12px;
@@ -832,7 +832,7 @@ body::after {
 
 .toast {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
     padding: 10px 16px;
     border-radius: 4px;
     border: 1px solid var(--border);
@@ -1188,7 +1188,7 @@ async function loadAnalysis() {
             html += `<div class="stat-row"><span class="stat-label">${escHtml(e.pattern.substring(0,60))}</span><span class="stat-value error">×${e.count}</span></div>`;
         });
     } else {
-        html += '<span class="stat-value ok" style="font-size:12px">No errors</span>';
+        html += '<span class="stat-value ok" style="font-size:14px">No errors</span>';
     }
     html += '</div>';
 
@@ -1199,7 +1199,7 @@ async function loadAnalysis() {
             html += `<div class="stat-row"><span class="stat-label">${escHtml(w.pattern.substring(0,60))}</span><span class="stat-value warn">×${w.count}</span></div>`;
         });
     } else {
-        html += '<span class="stat-value ok" style="font-size:12px">No warnings</span>';
+        html += '<span class="stat-value ok" style="font-size:14px">No warnings</span>';
     }
     html += '</div>';
 

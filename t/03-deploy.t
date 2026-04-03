@@ -6,7 +6,7 @@ use Test::Mojo;
 $ENV{DEPLOY_TOKEN} = 'test-token-123';
 $ENV{MOJO_MODE} = 'production';
 
-my $t = Test::Mojo->new(Mojo::File->new('bin/deploy.pl'));
+my $t = Test::Mojo->new(Mojo::File->new('bin/321.pl'));
 
 # Deploy without auth
 $t->post_ok('/service/123.api/deploy')
