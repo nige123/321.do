@@ -3,7 +3,8 @@
 # install.pl — first-time setup for 321.do
 # Usage: sudo perl bin/install.pl
 
-use v5.36;
+use v5.18;
+use feature 'say';
 use File::Copy;
 use File::Path qw(make_path);
 
