@@ -1,0 +1,40 @@
+services:
+
+  123.api:
+    repo: /home/s3/api.123.do
+    branch: master
+    bin: bin/app.pl
+    restart: hypnotoad
+    port: 9123
+    logs:
+      stdout: /tmp/123do.api.stdout.log
+      stderr: /tmp/123do.api.stderr.log
+      ubic: /tmp/123do.api.ubic.log
+      app: /tmp/123.api.stdout.log
+    env:
+      MOJO_MODE: production
+
+  123.web:
+    repo: /home/s3/web.123.do
+    branch: master
+    bin: script/web_123_do
+    restart: hypnotoad
+    port: 8123
+    logs:
+      stdout: /tmp/web.123.do.stdout.log
+      stderr: /tmp/web.123.do.stderr.log
+    env:
+      MOJO_MODE: production
+
+  nh.web:
+    repo: /home/s3/nigelhamilton.com/mojo
+    branch: master
+    bin: script/nh
+    restart: hypnotoad
+    port: 7007
+    perlbrew: perl-5.42.1
+    logs:
+      stdout: /tmp/nh.web.stdout.log
+      stderr: /tmp/nh.web.stderr.log
+    env:
+      MOJO_MODE: production

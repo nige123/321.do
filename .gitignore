@@ -1,0 +1,4 @@
+secrets/*.env
+deploy_token.txt
+/tmp/
+*precomp*
