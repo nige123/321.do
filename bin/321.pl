@@ -196,6 +196,98 @@ post '/services/generate-ubic' => sub ($c) {
     });
 };
 
+# --- Config CRUD ---
+
+# Get raw service config (decrypted)
+get '/service/#name/config' => sub ($c) {
+    my $name = $c->param('name');
+    return unless $c->validate_service($name);
+    my $raw = $config->service_raw($name);
+    $c->json_response(success => "Config for $name", $raw);
+};
+
+# Update service config
+post '/service/#name/config' => sub ($c) {
+    my $name = $c->param('name');
+    my $data = $c->req->json;
+    return $c->json_response(error => 'Invalid JSON body') unless $data;
+
+    app->log->info("Config update for $name");
+    my $file = $config->save_service($name, $data);
+
+    # Auto-commit
+    my $msg = "Update config: $name";
+    system('git', '-C', $app_home, 'add', "services/$name.yml");
+    system('git', '-C', $app_home, 'commit', '-m', $msg, '--', "services/$name.yml");
+
+    $c->json_response(success => "Config saved for $name", { file => "$file" });
+};
+
+# Create new service
+post '/services/create' => sub ($c) {
+    my $data = $c->req->json;
+    return $c->json_response(error => 'Invalid JSON body') unless $data;
+
+    my $name = $data->{name};
+    return $c->json_response(error => 'Missing service name') unless $name;
+    return $c->json_response(error => "Service $name already exists") if $config->service($name);
+
+    app->log->info("Creating service: $name");
+    my $file = $config->save_service($name, $data);
+
+    # Auto-commit
+    system('git', '-C', $app_home, 'add', "services/$name.yml");
+    system('git', '-C', $app_home, 'commit', '-m', "Add service: $name", '--', "services/$name.yml");
+
+    # Generate ubic file
+    if ($ubic_mgr) {
+        $ubic_mgr->generate($name);
+        $ubic_mgr->install_symlinks;
+    }
+
+    $c->json_response(success => "Service $name created", { file => "$file" });
+};
+
+# Delete service
+post '/service/#name/delete' => sub ($c) {
+    my $name = $c->param('name');
+    return $c->json_response(error => "Unknown service: $name") unless $config->service($name);
+
+    app->log->info("Deleting service: $name");
+    $config->delete_service($name);
+
+    # Auto-commit
+    system('git', '-C', $app_home, 'add', '-u', "services/$name.yml");
+    system('git', '-C', $app_home, 'commit', '-m', "Remove service: $name", '--', "services/$name.yml");
+
+    $c->json_response(success => "Service $name deleted");
+};
+
+# --- Git operations ---
+
+get '/git/status' => sub ($c) {
+    my $ahead = `cd \Q$app_home\E && git rev-list \@{u}..HEAD 2>/dev/null | wc -l`;
+    chomp $ahead;
+    $ahead = int($ahead // 0);
+    my $branch = `cd \Q$app_home\E && git branch --show-current 2>/dev/null`;
+    chomp $branch;
+    $c->json_response(success => 'Git status', {
+        unpushed => $ahead,
+        branch   => $branch,
+    });
+};
+
+post '/git/push' => sub ($c) {
+    app->log->info("Git push requested");
+    my $output = `cd \Q$app_home\E && git push 2>&1`;
+    my $ok = $? == 0;
+    if ($ok) {
+        $c->json_response(success => 'Pushed successfully', { output => $output });
+    } else {
+        $c->json_response(error => 'Push failed', { output => $output });
+    }
+};
+
 # --- UI Routes ---
 
 get '/' => sub ($c) {
@@ -220,7 +312,7 @@ __DATA__
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= title %> — 321.do MISSION CONTROL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 
 /* ═══ CORE ═══ */
@@ -253,7 +345,7 @@ __DATA__
     --text-1: #70b070;
     --text-2: #3a6b3a;
     --display: 'Orbitron', sans-serif;
-    --mono: 'Share Tech Mono', 'Courier New', monospace;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -417,6 +509,39 @@ body::after {
     background: rgba(255, 0, 51, 0.06);
     border: 1px solid rgba(255, 0, 51, 0.3);
     animation: alert-flash 2s ease-in-out infinite;
+}
+
+.git-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--display);
+    font-weight: 600;
+}
+
+.git-badge.synced {
+    color: var(--phosphor-dim);
+    background: rgba(0, 255, 65, 0.03);
+    border: 1px solid rgba(0, 255, 65, 0.1);
+}
+
+.git-badge.unpushed {
+    color: var(--amber);
+    background: rgba(255, 160, 0, 0.08);
+    border: 1px solid rgba(255, 160, 0, 0.25);
+}
+
+.git-badge:hover {
+    background: rgba(255, 160, 0, 0.15);
+    border-color: var(--amber);
+    color: var(--amber);
 }
 
 /* ═══ LAYOUT ═══ */
@@ -1054,6 +1179,129 @@ body::after {
     background: linear-gradient(90deg, var(--border), transparent);
 }
 
+/* ═══ CONFIG EDITOR ═══ */
+
+.config-editor {
+    background: var(--void);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.config-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+}
+
+.config-target-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--void);
+    padding: 2px;
+}
+
+.config-target-tab {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 5px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.config-target-tab:hover { color: var(--text-1); }
+
+.config-target-tab.active {
+    background: var(--panel-2);
+    color: var(--phosphor);
+    text-shadow: 0 0 8px var(--phosphor-glow);
+}
+
+.config-fields {
+    padding: 14px;
+}
+
+.config-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.config-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+
+.config-input {
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 6px 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--phosphor-mid);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+}
+
+.config-input:focus {
+    border-color: var(--phosphor-dim);
+    color: var(--phosphor);
+}
+
+.config-input.secret {
+    color: var(--amber);
+}
+
+.config-section-label {
+    font-family: var(--display);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--text-2);
+    margin: 16px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* ═══ ADD SUBSYSTEM ═══ */
+
+.add-subsystem-btn {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 12px 24px;
+    background: transparent;
+    border: 1px dashed var(--border-hi);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 100%;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.add-subsystem-btn:hover {
+    border-color: var(--phosphor-dim);
+    color: var(--phosphor);
+    background: rgba(0, 255, 65, 0.03);
+}
+
 /* ═══ ALERTS ═══ */
 
 .toast-container {
@@ -1187,6 +1435,9 @@ body::after {
 % }
     <div class="mission-title">MISSION CONTROL</div>
     <div class="mission-clock" id="mission-clock">--:--:--</div>
+    <div id="git-badge" class="git-badge synced" onclick="gitPush()" title="Click to push">
+        <span id="git-status">SYNCED</span>
+    </div>
     <div id="health-badge" class="health-badge ok">
         <span id="health-status">...</span>
     </div>
@@ -1259,7 +1510,7 @@ function updateClock() {
         ctx.fillStyle = 'rgba(1, 10, 1, 0.04)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'rgba(0, 255, 65, 0.07)';
-        ctx.font = fs + 'px Share Tech Mono';
+        ctx.font = fs + 'px IBM Plex Mono';
         for (let i = 0; i < cols; i++) {
             if (Math.random() > 0.975) {
                 ctx.fillText(chars[Math.random() * chars.length | 0], i * fs, drops[i] * fs);
@@ -1270,9 +1521,47 @@ function updateClock() {
     }, 60);
 })();
 
+async function loadGitStatus() {
+    try {
+        const d = await api('/git/status');
+        const b = document.getElementById('git-badge');
+        const s = document.getElementById('git-status');
+        if (d.status === 'success') {
+            const n = d.data.unpushed;
+            if (n > 0) {
+                s.textContent = n + ' UNPUSHED \u2191';
+                b.className = 'git-badge unpushed';
+            } else {
+                s.textContent = 'SYNCED';
+                b.className = 'git-badge synced';
+            }
+        }
+    } catch(e) {}
+}
+
+async function gitPush() {
+    const b = document.getElementById('git-badge');
+    const s = document.getElementById('git-status');
+    if (b.classList.contains('synced')) return;
+    s.textContent = 'PUSHING...';
+    try {
+        const d = await api('/git/push', { method: 'POST' });
+        if (d.status === 'success') {
+            toast('Push successful');
+        } else {
+            toast(d.message || 'Push failed', 'error');
+        }
+    } catch(e) {
+        toast('Push error: ' + e.message, 'error');
+    }
+    loadGitStatus();
+}
+
 loadHealth();
+loadGitStatus();
 updateClock();
 setInterval(loadHealth, 15000);
+setInterval(loadGitStatus, 15000);
 setInterval(updateClock, 1000);
 </script>
 
@@ -1338,6 +1627,46 @@ async function loadServices() {
         `;
         grid.appendChild(card);
     });
+
+    // Add "ADD SUBSYSTEM" card
+    const addCard = document.createElement('div');
+    addCard.innerHTML = '<button class="add-subsystem-btn" onclick="addSubsystem()">+ ADD SUBSYSTEM</button>';
+    grid.appendChild(addCard);
+}
+
+async function addSubsystem() {
+    const name = prompt('Service name (e.g. myapp.web):');
+    if (!name) return;
+    if (!/^[a-z0-9]+\.[a-z0-9]+$/.test(name)) {
+        toast('Name must be group.service (e.g. myapp.web)', 'error');
+        return;
+    }
+    const data = {
+        name: name,
+        repo: '/home/s3/' + name.split('.')[0],
+        branch: 'master',
+        bin: 'bin/app.pl',
+        targets: {
+            live: { port: '', runner: 'hypnotoad', env: {}, logs: {} },
+            dev: { port: '', runner: 'morbo', env: {}, logs: {} },
+        },
+    };
+    try {
+        const d = await api('/services/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (d.status === 'success') {
+            toast(name + ' created');
+            loadServices();
+            loadGitStatus();
+        } else {
+            toast(d.message || 'Create failed', 'error');
+        }
+    } catch(e) {
+        toast('Error: ' + e.message, 'error');
+    }
 }
 
 async function deployService(name, btn, isDev = false) {
@@ -1430,6 +1759,17 @@ setInterval(loadServices, 30000);
         <div class="section-title" style="margin-top:24px">DIAGNOSTICS</div>
         <div id="analysis-container">
             <div class="analysis-card"><div class="skeleton" style="width:50%;margin-bottom:8px"></div><div class="skeleton" style="width:70%"></div></div>
+        </div>
+
+        <div class="section-title" style="margin-top:24px">CONFIG</div>
+        <div class="config-editor" id="config-editor">
+            <div class="config-toolbar">
+                <div class="config-target-tabs" id="config-target-tabs"></div>
+                <button class="btn" onclick="saveConfig()">SAVE</button>
+            </div>
+            <div class="config-fields" id="config-fields">
+                <span class="log-empty">Loading config...</span>
+            </div>
         </div>
     </div>
 </div>
@@ -1635,9 +1975,129 @@ async function deploy(isDev = false) {
     loadStatus();
 }
 
+let svcConfig = null;
+let currentTarget = null;
+
+async function loadConfig() {
+    const d = await api('/service/' + SVC + '/config');
+    if (d.status !== 'success') return;
+    svcConfig = d.data;
+
+    const tabs = document.getElementById('config-target-tabs');
+    const targets = Object.keys(svcConfig.targets || {});
+    tabs.innerHTML = '';
+    targets.forEach((t, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'config-target-tab' + (i === 0 ? ' active' : '');
+        btn.textContent = t;
+        btn.onclick = () => {
+            document.querySelectorAll('.config-target-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentTarget = t;
+            renderConfigFields(t);
+        };
+        tabs.appendChild(btn);
+    });
+
+    // Add "+" button to add new target
+    const addBtn = document.createElement('button');
+    addBtn.className = 'config-target-tab';
+    addBtn.textContent = '+';
+    addBtn.onclick = () => {
+        const name = prompt('Target name (e.g. staging):');
+        if (!name || svcConfig.targets[name]) return;
+        svcConfig.targets[name] = { port: '', runner: 'hypnotoad', env: {}, logs: {} };
+        loadConfig();
+    };
+    tabs.appendChild(addBtn);
+
+    currentTarget = targets[0] || 'live';
+    renderConfigFields(currentTarget);
+}
+
+function renderConfigFields(targetName) {
+    const fields = document.getElementById('config-fields');
+    const t = svcConfig.targets[targetName] || {};
+    let html = '';
+
+    html += '<div class="config-section-label">SERVICE</div>';
+    html += configRow('REPO', 'cfg-repo', svcConfig.repo || '');
+    html += configRow('BRANCH', 'cfg-branch', svcConfig.branch || 'master');
+    html += configRow('BIN', 'cfg-bin', svcConfig.bin || '');
+    html += configRow('PERLBREW', 'cfg-perlbrew', svcConfig.perlbrew || '');
+
+    html += '<div class="config-section-label">TARGET: ' + targetName.toUpperCase() + '</div>';
+    html += configRow('HOST', 'cfg-host', t.host || '');
+    html += configRow('PORT', 'cfg-port', t.port || '');
+    html += configRow('RUNNER', 'cfg-runner', t.runner || 'hypnotoad');
+
+    html += '<div class="config-section-label">ENVIRONMENT</div>';
+    const env = t.env || {};
+    Object.entries(env).forEach(([k, v]) => {
+        html += configRow(k, 'cfg-env-' + k, v, true);
+    });
+    html += '<div class="config-row"><span class="config-label"></span><button class="btn" onclick="addEnvVar()" style="font-size:11px">+ ADD VAR</button></div>';
+
+    fields.innerHTML = html;
+}
+
+function configRow(label, id, value, isSecret) {
+    const cls = isSecret ? 'config-input secret' : 'config-input';
+    return '<div class="config-row"><span class="config-label">' + label + '</span><input class="' + cls + '" id="' + id + '" value="' + escHtml(String(value)) + '" data-field="' + label + '"></div>';
+}
+
+function addEnvVar() {
+    const key = prompt('Variable name (e.g. DB_PASS):');
+    if (!key) return;
+    if (!svcConfig.targets[currentTarget].env) svcConfig.targets[currentTarget].env = {};
+    svcConfig.targets[currentTarget].env[key] = '';
+    renderConfigFields(currentTarget);
+    const input = document.getElementById('cfg-env-' + key);
+    if (input) input.focus();
+}
+
+async function saveConfig() {
+    // Read values from fields
+    svcConfig.repo = document.getElementById('cfg-repo').value;
+    svcConfig.branch = document.getElementById('cfg-branch').value;
+    svcConfig.bin = document.getElementById('cfg-bin').value;
+    const pb = document.getElementById('cfg-perlbrew').value;
+    if (pb) svcConfig.perlbrew = pb; else delete svcConfig.perlbrew;
+
+    const t = svcConfig.targets[currentTarget];
+    t.host = document.getElementById('cfg-host').value;
+    t.port = parseInt(document.getElementById('cfg-port').value) || '';
+    t.runner = document.getElementById('cfg-runner').value;
+
+    // Read env vars
+    const env = {};
+    document.querySelectorAll('.config-input.secret').forEach(input => {
+        const key = input.dataset.field;
+        if (key) env[key] = input.value;
+    });
+    t.env = env;
+
+    try {
+        const d = await api('/service/' + SVC + '/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(svcConfig),
+        });
+        if (d.status === 'success') {
+            toast('Config saved');
+            loadGitStatus();
+        } else {
+            toast(d.message || 'Save failed', 'error');
+        }
+    } catch(e) {
+        toast('Save error: ' + e.message, 'error');
+    }
+}
+
 loadStatus();
 initLogTabs();
 loadAnalysis();
+loadConfig();
 setInterval(loadStatus, 10000);
 </script>
 % end
