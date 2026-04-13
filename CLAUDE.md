@@ -2,42 +2,102 @@
 
 ## Project Overview
 
-321.do — 3... 2... 1... deploy! A standalone deploy and log analysis service for managing Perl/Mojolicious services. Replaces in-app deploy endpoints that caused outages by restarting themselves mid-request.
+321.do — 3... 2... 1... deploy! A standalone deploy, log analysis, and operations service for managing Perl/Mojolicious services. Replaces in-app deploy endpoints that caused outages by restarting themselves mid-request.
+
+Runs on both the dev machine (`dev.321.do`) and production (`321.do`). The same daemon can deploy locally or remotely; production deploys do a `git fetch` + `git reset --hard origin/<branch>` first.
 
 ## Tech Stack
 
 - **Language:** Perl 5.42 (`Mojo::Base -base, -signatures`)
 - **Framework:** Mojolicious::Lite
-- **Config:** YAML service registry (`services.yml`)
-- **No database** — stateless, config-driven
+- **Service controller:** UBIC (wrapping Hypnotoad for hot-restart zero-downtime deploys, or Morbo for dev)
+- **Web server:** nginx (config + certbot managed by 321)
+- **Config:** Per-service YAML files under `services/`, encrypted with SOPS (age recipients). Legacy flat `services.yml` is still read as a fallback.
+- **Secrets:** `secrets/<name>.env` files (shell-style `KEY=value`) loaded into the ubic wrapper env; sensitive fields in `services/*.yml` are SOPS-encrypted (the `env` regex).
+- **No database** — stateless, config-driven.
 
 ## Architecture
 
-Single lightweight daemon on port **9999**. Hypnotoad hot restarts for zero-downtime deploys.
+Single lightweight daemon on port **9321**. Entry point is `bin/321.pl` (Mojolicious::Lite). A thin `bin/321` wrapper `exec`s it so the same app serves HTTP routes and CLI commands.
+
+Core modules (`lib/Deploy/`):
+
+- `Config.pm` — loads/saves per-service YAML, handles SOPS decrypt/encrypt, resolves the active target (`dev`/`live`), exposes `load_secrets`.
+- `Service.pm` — `status`, `deploy` (git + cpanm + ubic restart + port check), `deploy_dev` (no git pull), log writes under `/tmp/321.do/deploys/`.
+- `Ubic.pm` — generates `ubic/service/<group>/<name>` files from config and installs symlinks under `~/ubic/service/<group>/<name>`. Builds the `perlbrew exec --with … env KEY=VAL hypnotoad -f …` (or `morbo`) command line.
+- `Nginx.pm` — renders `/etc/nginx/sites-available/<host>` (HTTP + optional SSL via letsencrypt), enables the site, runs `nginx -t` + `systemctl reload nginx`, drives certbot.
+- `Logs.pm` — tail / search / analyse for stdout, stderr, and ubic logs.
+- `Command.pm` + `Command/` — Mojolicious CLI subcommands registered via `app->commands->namespaces`.
+
+### Targets (dev vs live)
+
+Each service YAML has `targets: { dev: {…}, live: {…} }` with per-target `host`, `port`, `runner`, `env`, `logs`. The active target comes from the `target` cookie (defaults to `dev` in development mode, `live` in production). `POST /target` and `GET /target` set/read it; `Config->service($name)` resolves to the active target.
+
+### Service naming
+
+Service names are `<group>.<name>` (e.g. `321.web`, `123.api`). The group/name split drives the ubic symlink layout: `~/ubic/service/<group>/<name>` → `<repo>/ubic/service/<group>/<name>`.
 
 ### Endpoints
 
 ```
-GET  /                            — Dashboard UI
-GET  /ui/service/:name            — Service detail UI
-GET  /services                    — list all services and their status
-GET  /service/:name/status        — detailed status
-POST /service/:name/deploy        — deploy: git pull → cpanm → hypnotoad restart
-GET  /service/:name/logs          — tail logs (?type=stderr&n=100)
-GET  /service/:name/logs/search   — search logs (?q=error&type=stderr&n=50)
-GET  /service/:name/logs/analyse  — error/warning aggregation
-GET  /health                      — health check (public, no auth)
+GET  /                                — Dashboard UI
+GET  /ui/service/:name                — Service detail UI
+GET  /health                          — health check (public, no auth)
+
+GET  /services                        — list all services + status
+GET  /service/:name/status            — detailed status (pid, port, git sha, mode, runner)
+POST /service/:name/deploy            — git pull + cpanm + regenerate ubic + ubic restart + port check
+POST /service/:name/deploy-dev        — cpanm + regenerate ubic + ubic restart (no git pull)
+POST /service/:name/start             — ubic start
+POST /service/:name/stop              — ubic stop
+POST /service/:name/restart           — ubic restart
+
+GET  /service/:name/logs              — tail logs (?type=stdout|stderr|ubic&n=100, max n=1000)
+GET  /service/:name/logs/search       — search logs (?q=…&type=…&n=50, max n=500)
+GET  /service/:name/logs/analyse      — error/warning aggregation (?n=1000, max n=10000)
+
+GET  /service/:name/config            — raw decrypted service YAML
+POST /service/:name/config            — update config (JSON body) + git commit
+POST /services/create                 — create service (JSON body, requires `name`) + git commit + ubic generate
+POST /service/:name/delete            — delete service + git commit
+POST /services/generate-ubic          — regenerate all ubic files + install symlinks
+
+GET  /service/:name/nginx             — nginx site status (config_exists, enabled, ssl)
+POST /service/:name/nginx/setup       — generate + enable site, test, reload nginx
+POST /service/:name/nginx/certbot     — request letsencrypt cert, regenerate config with SSL, reload
+
+GET  /git/status                      — { branch, unpushed }
+POST /git/push                        — git push in app home
+
+GET  /target                          — { target, available }
+POST /target                          — set active target cookie (JSON: { target })
 ```
+
+All JSON responses follow `{ status, message, data }`.
+
+### CLI
+
+`bin/321` (or `perl bin/321.pl <subcommand>`):
+
+```
+321 list                   # all services with mode, runner, port
+321 status [service]       # ubic status for one or all
+321 start|stop|restart <service>
+321 go <service>           # deploy: git pull + cpanm + ubic restart (dev mode: ubic restart only)
+321 install <service>      # first-time: clone + cpanm + ubic + nginx + certbot
+321 generate               # regenerate all ubic service files + symlinks
+```
+
+Service-name arguments accept prefix/substring matches (see `Deploy::Command::resolve_service`).
 
 ### Auth
 
-Bearer token required in production. Skipped in development mode.
-Token from `DEPLOY_TOKEN` env var or `deploy_token.txt`.
+HTTP Basic Auth required in production — credentials `321:kaizen`. Accepted via `Authorization: Basic …` header or `https://321:kaizen@…` URL userinfo. Auth is skipped in development mode and `/health` is always public.
 
 ## Development
 
 ```bash
-perl bin/321.pl daemon -l http://127.0.0.1:9999
+perl bin/321.pl daemon -l http://127.0.0.1:9321
 prove -lr t
 ```
 
@@ -45,4 +105,4 @@ prove -lr t
 
 - Four space indentation
 - JSON responses: `{ status, message, data }`
-- All endpoints require Bearer token auth in production (except GET /health)
+- All endpoints require HTTP Basic Auth in production (except `GET /health`)
