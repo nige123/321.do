@@ -136,6 +136,16 @@ say "--- Setting up ubic service ---";
 system("$perlbrew cpanm Ubic Ubic::Service::SimpleDaemon") == 0
     or die "Failed to install Ubic modules\n";
 
+# Ubic needs a one-time setup to create /var/lib/ubic, /var/log/ubic, etc.
+# The existence of /etc/ubic/ubic.cfg is ubic's own "already configured" marker.
+unless (-f '/etc/ubic/ubic.cfg') {
+    say "  Running ubic-admin setup (first-time ubic bootstrap)...";
+    system(  "ubic-admin setup --batch-mode"
+           . " --service-dir $app_dir/ubic/service"
+           . " --default-user $run_user") == 0
+        or die "ubic-admin setup failed\n";
+}
+
 # Generate ubic files from services.yml and install symlinks
 system("su - $run_user -c 'cd $app_dir && $perlbrew perl -Ilib -e \"use Deploy::Config; use Deploy::Ubic; my \\\$c = Deploy::Config->new(app_home => q{$app_dir}); my \\\$u = Deploy::Ubic->new(config => \\\$c); \\\$u->generate_all; \\\$u->install_symlinks; print qq{Ubic files generated and symlinked\\n}\"'") == 0
     or die "Failed to generate ubic service files\n";
