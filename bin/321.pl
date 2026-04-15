@@ -2062,7 +2062,7 @@ setInterval(loadServices, 30000);
                 DEPLOY
             </button>
             <a id="visit-btn" href="#" target="_blank" rel="noopener"
-               class="btn btn-tint"
+               class="btn btn-tint btn-visit"
                style="width:100%;justify-content:center;margin-top:8px;display:none">
                 VISIT &rarr;
             </a>
