@@ -161,6 +161,18 @@ sub load_secrets ($self, $name) {
     return \%env;
 }
 
+sub dev_hostnames ($self) {
+    my %seen;
+    my @hosts;
+    for my $name (@{ $self->service_names }) {
+        my $dev = ($self->service_raw($name) || {})->{targets}{dev} or next;
+        my $h = $dev->{host} or next;
+        next if $h eq 'localhost';
+        push @hosts, $h unless $seen{$h}++;
+    }
+    return [ sort @hosts ];
+}
+
 sub deploy_token ($self) {
     return $ENV{DEPLOY_TOKEN} if $ENV{DEPLOY_TOKEN};
     my $token_file = path($self->app_home, 'deploy_token.txt');

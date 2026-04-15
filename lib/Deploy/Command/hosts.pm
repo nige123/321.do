@@ -7,35 +7,20 @@ has description => 'Update /etc/hosts with dev-target hostnames';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
-    my @hosts = $self->_dev_hosts;
+    my $hosts = $self->config->dev_hostnames;
 
     if ($args[0] && $args[0] eq '--print') {
-        say for @hosts;
+        say for @$hosts;
         return;
     }
 
-    my $h = Deploy::Hosts->new;
-    my $err = eval { $h->write(\@hosts); 0 } || $@;
-    if ($err =~ /Permission denied/) {
+    unless (-w '/etc/hosts') {
         die "\n  /etc/hosts needs sudo. Re-run:\n  sudo -E perl bin/321.pl hosts\n";
     }
-    die $err if $err;
 
-    say "Wrote " . scalar(@hosts) . " dev host(s) to /etc/hosts:";
-    say "  $_" for @hosts;
-}
-
-sub _dev_hosts ($self) {
-    my $cfg = $self->config;
-    my %seen;
-    my @hosts;
-    for my $name (@{ $cfg->service_names }) {
-        my $raw = $cfg->service_raw($name);
-        my $dev = $raw->{targets}{dev} // next;
-        my $host = $dev->{host};
-        push @hosts, $host if $host && $host ne 'localhost' && !$seen{$host}++;
-    }
-    return sort @hosts;
+    Deploy::Hosts->new->write($hosts);
+    say "Wrote " . scalar(@$hosts) . " dev host(s) to /etc/hosts:";
+    say "  $_" for @$hosts;
 }
 
 1;
