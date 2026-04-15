@@ -1125,6 +1125,18 @@ body::after {
 
 .deploy-output.visible { display: block; }
 
+.lifecycle-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+.lifecycle-row .btn {
+    flex: 1;
+    justify-content: center;
+    font-size: 11px;
+    padding: 6px 8px;
+}
+
 .deploy-output .step-ok { color: var(--phosphor); text-shadow: 0 0 8px var(--phosphor-glow); }
 .deploy-output .step-fail { color: var(--red); text-shadow: 0 0 8px var(--red-glow); }
 .deploy-output .step-label { color: var(--text-2); }
@@ -2085,6 +2097,11 @@ setInterval(loadServices, 30000);
             <button class="btn btn-deploy" id="deploy-btn" onclick="deploy()" style="width:100%;justify-content:center">
                 DEPLOY
             </button>
+            <div class="lifecycle-row">
+                <button class="btn btn-tint btn-docs"  id="update-btn"  onclick="lifecycle('update')"  title="git pull + cpanm + migrate, no restart">UPDATE</button>
+                <button class="btn btn-tint btn-admin" id="migrate-btn" onclick="lifecycle('migrate')" title="Run bin/migrate only">MIGRATE</button>
+                <button class="btn btn-tint btn-stop"  id="restart-btn" onclick="lifecycle('restart')" title="ubic restart + port check">RESTART</button>
+            </div>
             <a id="visit-btn" href="#" target="_blank" rel="noopener"
                class="btn btn-tint btn-visit"
                style="width:100%;justify-content:center;margin-top:8px;display:none">
@@ -2356,6 +2373,34 @@ async function deploy(isDev = false) {
     btn.disabled = false;
     btn.classList.remove('deploying');
     btn.innerHTML = isDev ? 'DEPLOY DEV' : 'DEPLOY';
+    loadStatus();
+}
+
+async function lifecycle(action) {
+    const btn = document.getElementById(action + '-btn');
+    activateDeployTab();
+    const out = document.getElementById('log-content');
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.innerHTML = '<span class="spinner"></span> ' + action.toUpperCase();
+    out.innerHTML = '<span class="step-label">Running ' + action + '...</span>';
+
+    try {
+        const d = await api('/service/' + SVC + '/' + action, { method: 'POST' });
+        lastDeploySteps = (d.data && d.data.steps) || [];
+        renderDeploySteps(out, lastDeploySteps);
+        if (d.status === 'success') {
+            toast(SVC + ' ' + action + ' ok');
+        } else {
+            toast(d.message || (action + ' failed'), 'error');
+        }
+    } catch(e) {
+        out.innerHTML = '<div class="step-fail">\u2717 ABORT: ' + esc(e.message) + '</div>';
+        toast(action + ' error: ' + e.message, 'error');
+    }
+
+    btn.disabled = false;
+    btn.textContent = original;
     loadStatus();
 }
 
