@@ -2,12 +2,15 @@ package Deploy::Nginx;
 
 use Mojo::Base -base, -signatures;
 use Path::Tiny qw(path);
+use Deploy::CertProvider;
 
 has 'config';  # Deploy::Config instance
 has 'log';     # Mojo::Log instance (optional)
 
 has 'sites_available' => '/etc/nginx/sites-available';
 has 'sites_enabled'   => '/etc/nginx/sites-enabled';
+
+has 'cert_provider' => sub { Deploy::CertProvider->new };
 
 sub _valid_host ($self, $host) {
     return $host && $host =~ /^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$/;
@@ -22,10 +25,12 @@ sub generate ($self, $name) {
     return { status => 'error', message => "No port configured for $name" } unless $port;
     return { status => 'error', message => "Invalid hostname: $host" } unless $self->_valid_host($host);
 
-    my $has_ssl = -f "/etc/letsencrypt/live/$host/fullchain.pem";
-    my $conf = $self->_render_config($host, $port, $has_ssl);
-    my $file = path($self->sites_available, $host);
+    my $provider = $self->cert_provider->pick($self->config->target);
+    my $paths    = $self->cert_provider->cert_paths(provider => $provider, host => $host);
+    my $has_ssl  = -f $paths->{cert};
 
+    my $conf = $self->_render_config($host, $port, $has_ssl, $paths);
+    my $file = path($self->sites_available, $host);
     $file->spew_utf8($conf);
     $self->log->info("Generated nginx config: $file") if $self->log;
 
@@ -66,21 +71,24 @@ sub reload ($self) {
     return { status => ($ok ? 'ok' : 'error'), output => $output };
 }
 
-sub certbot ($self, $name) {
+sub acquire_cert ($self, $name) {
     my $svc = $self->config->service($name);
     return { status => 'error', message => "Unknown service: $name" } unless $svc;
 
     my $host = $svc->{host} // 'localhost';
     return { status => 'error', message => "Invalid hostname: $host" } unless $self->_valid_host($host);
-    return { status => 'ok', message => 'SSL cert already exists' }
-        if -f "/etc/letsencrypt/live/$host/fullchain.pem";
 
-    my @cmd = ('certbot', 'certonly', '--standalone', '-d', $host,
-               '--non-interactive', '--agree-tos', '-m', "admin\@$host");
-    my $output = `@cmd 2>&1`;
+    my $provider = $self->cert_provider->pick($self->config->target);
+    my $paths    = $self->cert_provider->cert_paths(provider => $provider, host => $host);
+    return { status => 'ok', message => 'SSL cert already exists' } if -f $paths->{cert};
+
+    my $cmd = $self->cert_provider->acquire_cmd(provider => $provider, host => $host);
+    my $output = `$cmd 2>&1`;
     my $ok = $? == 0;
-    return { status => ($ok ? 'ok' : 'error'), output => $output };
+    return { status => ($ok ? 'ok' : 'error'), output => $output, provider => $provider };
 }
+
+sub certbot ($self, $name) { $self->acquire_cert($name) }  # backwards compat
 
 sub setup ($self, $name) {
     my @steps;
@@ -107,16 +115,20 @@ sub status ($self, $name) {
     my $svc = $self->config->service($name);
     return undef unless $svc;
 
-    my $host = $svc->{host} // 'localhost';
+    my $host     = $svc->{host} // 'localhost';
+    my $provider = $self->cert_provider->pick($self->config->target);
+    my $paths    = $self->cert_provider->cert_paths(provider => $provider, host => $host);
+
     return {
-        config_exists  => -f path($self->sites_available, $host),
-        enabled        => -l path($self->sites_enabled, $host),
-        ssl            => -f "/etc/letsencrypt/live/$host/fullchain.pem" ? 1 : 0,
-        host           => $host,
+        config_exists => -f path($self->sites_available, $host) ? 1 : 0,
+        enabled       => -l path($self->sites_enabled,   $host) ? 1 : 0,
+        ssl           => -f $paths->{cert} ? 1 : 0,
+        provider      => $provider,
+        host          => $host,
     };
 }
 
-sub _render_config ($self, $host, $port, $has_ssl) {
+sub _render_config ($self, $host, $port, $has_ssl, $paths) {
     my $conf = <<"NGINX";
 server {
     listen 80;
@@ -133,8 +145,8 @@ server {
     listen [::]:443 ssl;
     server_name $host;
 
-    ssl_certificate     /etc/letsencrypt/live/$host/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$host/privkey.pem;
+    ssl_certificate     $paths->{cert};
+    ssl_certificate_key $paths->{key};
 
     ssl_protocols TLSv1.2;
     ssl_ciphers HIGH:!aNULL:!MD5;
