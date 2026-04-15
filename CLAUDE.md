@@ -11,7 +11,7 @@ Runs on both the dev machine (`dev.321.do`) and production (`321.do`). The same 
 - **Language:** Perl 5.42 (`Mojo::Base -base, -signatures`)
 - **Framework:** Mojolicious::Lite
 - **Service controller:** UBIC (wrapping Hypnotoad for hot-restart zero-downtime deploys, or Morbo for dev)
-- **Web server:** nginx (config + certbot managed by 321)
+- **Web server:** nginx (config managed by 321; SSL via letsencrypt/certbot on live, mkcert on dev — see Dev parity)
 - **Config:** Per-service YAML files under `services/`, encrypted with SOPS (age recipients). Legacy flat `services.yml` is still read as a fallback.
 - **Secrets:** `secrets/<name>.env` files (shell-style `KEY=value`) loaded into the ubic wrapper env; sensitive fields in `services/*.yml` are SOPS-encrypted (the `env` regex).
 - **No database** — stateless, config-driven.
@@ -25,7 +25,9 @@ Core modules (`lib/Deploy/`):
 - `Config.pm` — loads/saves per-service YAML, handles SOPS decrypt/encrypt, resolves the active target (`dev`/`live`), exposes `load_secrets`.
 - `Service.pm` — `status`, `deploy` (git + cpanm + ubic restart + port check), `deploy_dev` (no git pull), log writes under `/tmp/321.do/deploys/`.
 - `Ubic.pm` — generates `ubic/service/<group>/<name>` files from config and installs symlinks under `~/ubic/service/<group>/<name>`. Builds the `perlbrew exec --with … env KEY=VAL hypnotoad -f …` (or `morbo`) command line.
-- `Nginx.pm` — renders `/etc/nginx/sites-available/<host>` (HTTP + optional SSL via letsencrypt), enables the site, runs `nginx -t` + `systemctl reload nginx`, drives certbot.
+- `Nginx.pm` — renders `/etc/nginx/sites-available/<host>` (HTTP + optional SSL), enables the site, runs `nginx -t` + `systemctl reload nginx`. Delegates cert paths and acquisition commands to `CertProvider`.
+- `CertProvider.pm` — chooses certbot (live) or mkcert (dev) based on active target; returns cert/key paths and the acquire command. See `## Dev parity`.
+- `Hosts.pm` — rewrites the `# BEGIN 321.do managed` block in `/etc/hosts` with dev-target hostnames pulled from `Config->dev_hostnames`. See `## Dev parity`.
 - `Logs.pm` — tail / search / analyse for stdout, stderr, and ubic logs.
 - `Command.pm` + `Command/` — Mojolicious CLI subcommands registered via `app->commands->namespaces`.
 
