@@ -7,7 +7,7 @@ use Mojolicious::Lite -signatures;
 use Mojo::File qw(curfile);
 
 app->config(hypnotoad => {listen => ['http://127.0.0.1:9321']});
-push @{app->commands->namespaces}, 'Deploy::Command';
+unshift @{app->commands->namespaces}, 'Deploy::Command';
 
 my $app_home = curfile->dirname->dirname;
 use lib curfile->dirname->dirname->child('lib')->to_string;
