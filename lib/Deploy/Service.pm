@@ -51,6 +51,10 @@ sub deploy ($self, $name, %opts) {
     my $branch = $svc->{branch} // 'master';
     my ($ok, $out);
 
+    ($ok, $out) = $self->_check_apt_deps($svc);
+    push @steps, { step => 'apt_deps', success => $ok ? \1 : \0, output => $out };
+    return $self->_deploy_result($name, 'error', 'System packages missing', \@steps) unless $ok;
+
     unless ($skip_git) {
         ($ok, $out) = $self->_run_in_dir($repo, "git fetch origin && git reset --hard origin/$branch");
         push @steps, { step => 'git_pull', success => $ok, output => $out };
@@ -86,6 +90,21 @@ sub deploy ($self, $name, %opts) {
 
 sub deploy_dev ($self, $name) {
     return $self->deploy($name, skip_git => 1);
+}
+
+sub _check_apt_deps ($self, $svc) {
+    my $deps = $svc->{apt_deps} // [];
+    return (1, 'no apt_deps declared') unless @$deps;
+
+    my @missing;
+    for my $pkg (@$deps) {
+        push @missing, $pkg if system("dpkg -s \Q$pkg\E >/dev/null 2>&1") != 0;
+    }
+
+    return (1, 'all installed: ' . join(' ', @$deps)) unless @missing;
+
+    my $cmd = 'sudo apt install -y ' . join(' ', @missing);
+    return (0, "Missing system packages: " . join(', ', @missing) . "\n\nRun:\n  $cmd");
 }
 
 sub _cpanm_cmd ($self, $perlbrew) {

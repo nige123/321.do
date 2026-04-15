@@ -1,3 +1,6 @@
+apt_deps:
+    - libexpat1-dev
+    - libpng-dev
 bin: bin/app.pl
 branch: master
 name: zorda.web
@@ -24,14 +27,14 @@ sops:
         - recipient: age1aym3w56q3wx0u8p6dpxkc2skxz838ut78cjznyjncnz3zz8a35kqzrp3q7
           enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
-            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBiditqK1IvL0pvUmJIdHdZ
-            Q3NVUDRjdjhBT1FNSlZtRnNPZk03N0xwcWo4ClhEWE9lb2x6Y1dML2VKd0VHcC9X
-            SThOM25BeDh3QkhPa0ZyTUg3cXFFdFkKLS0tIGcrLzdObzFtSUw1R1ROdE5JUzJp
-            bUtiWFhDQStuUCttOHU2UHpMcHBnV2sKK3INDj9KHQjv6nI6RskidwRbQt6h03Gx
-            b+NFPjSIl9MnZZ8Ww6gzhvs5aB+T5gpRzGYQoM7SCiL8eSRf7R9Gzg==
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAxMHlZRE5HYUszTFl6TGxn
+            UUo4R2RaS1dqQmVUQjJiOVg2T3hKZHJDRkcwCm5VaEtBZVoyYjZMUHhrWXQxY29M
+            a2VBNjk5aFlyMkxHdDU3TjRDdkswcUkKLS0tIDBIU1VrQk5uRGlFT1d0UFF0RExF
+            M0IrOXgwOGhiY1pIMEN5bUpHK3c1dncKtlrdOJG2pe4gnvxAWEc3hBrpdfKOf9cT
+            FANNmmculR2E7aHeH9bwUrnyb3zXTQ6ypACkqZyzEZ+naYJxoistvQ==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-04-15T18:50:32Z"
-    mac: ENC[AES256_GCM,data:FbhD7TdwyKQmYl4YfLvdd7VJswdLnCk3zOdav/RXJy3cFnA5NOYVJnB+PtN2UfoP9LJg86FU26w5u2LZcl5/N5Dtj+ZnSjvaDf/sHlUgRizjF35YTFJxZv62wEQ4ljva6qKN0sH7xBIN61r0+0bf3MXN8fmnY+hQiBa4upFbi+g=,iv:4Ge31aJqrLBUYmHAxA32tMiJTrXIMXKCGNEaJvfA0Qc=,tag:qH2hrwTT0RbiS3Fx4nolOw==,type:str]
+    lastmodified: "2026-04-15T19:42:42Z"
+    mac: ENC[AES256_GCM,data:H0uV70r+w+RWBIY6UgiUApXQNhKwIIY4MrUxqytcQv585iOKTrD8PYwHqnfgFX8u/xmuvnZu48sQH+VevoP15hQU4UUpoiOXwz84JYcfNpVuXKtoYPIXSACr/OBHWm6/wmCHpSyvlzGB8spEo0wsoRW4RvFUsiN0ggmyUyq+q1Y=,iv:WcD2XXsIEWCTLWn7LCVltm2vGbc7R4biC8CJqm2D4lQ=,tag:5hbGdsE98a92sfVM8+vZFg==,type:str]
     pgp: []
     encrypted_regex: ^(env)$
     version: 3.9.4

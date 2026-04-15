@@ -101,6 +101,30 @@ Use dev for local iteration (morbo autoreload, mkcert SSL, `dev.*.do` hostnames)
 
 ---
 
+## System packages (`apt_deps`)
+
+Perl-XS modules need matching system `-dev` headers to compile. Rather than giving the 321 daemon passwordless sudo, each service declares the apt packages it needs in its YAML and `321 deploy` precheck-fails fast with a copy-pasteable install command when any are missing:
+
+```yaml
+# services/zorda.web.yml
+apt_deps:
+  - libexpat1-dev    # XML::Parser, XML::LibXML, etc.
+  - libpng-dev       # Image::PNG::Libpng (QR codes)
+```
+
+When a package is missing, the deploy's `apt_deps` step fails with:
+
+```
+Missing system packages: libexpat1-dev, libpng-dev
+
+Run:
+  sudo apt install -y libexpat1-dev libpng-dev
+```
+
+You run that once per box; subsequent deploys pass silently. Common ones worth knowing: `libssl-dev` (Net::SSLeay), `libxml2-dev` (XML::LibXML), `libmariadb-dev`/`libpq-dev` (DBD::mysql/Pg), `zlib1g-dev` (Compress::Zlib).
+
+---
+
 ## Per-repo Perl deps (`local/`)
 
 Each service repo keeps its own CPAN dependencies under `./local/`. Deploys run `cpanm -L local/ --notest --installdeps .`; the generated ubic wrapper prepends `PERL5LIB=<repo>/local/lib/perl5` and `PATH=<repo>/local/bin:$PATH` so the running daemon finds them. No sharing with system `site_perl`; no cross-service pollution.
