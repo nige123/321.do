@@ -11,7 +11,7 @@ targets:
             stdout: /tmp/123.web.do.stdout.log
             stderr: /tmp/123.web.do.stderr.log
         env:
-            MOJO_MODE: ENC[AES256_GCM,data:FTPy8vGs0Jxy0Q==,iv:Dhvss3ntvekam+7DYNwvJTR3f/tJCGzhZfl03gTw65U=,tag:DJrbgg72eS3gw5F7evEyAQ==,type:str]
+            MOJO_MODE: ""
     dev:
         host: 123.do.dev
         port: 8123
@@ -20,24 +20,24 @@ targets:
             stdout: /tmp/123.web.do.stdout.log
             stderr: /tmp/123.web.do.stderr.log
         env:
-            MOJO_MODE: ENC[AES256_GCM,data:k7D/tIBpLyfyqYk=,iv:xRNyMt/Nu+9t9OF97T936ERgwWiCxQOt0Ax/KkIHaG4=,tag:J3DLOeHJa6oQzFgwEK+umw==,type:str]
+            MOJO_MODE: ""
 sops:
     kms: []
     gcp_kms: []
     azure_kv: []
     hc_vault: []
     age:
-        - recipient: age19ewwpe6626u470qdp5jhuheuekg7s6ak8gcntjmt20q64560ucfsny8efc
+        - recipient: age1aym3w56q3wx0u8p6dpxkc2skxz838ut78cjznyjncnz3zz8a35kqzrp3q7
           enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
-            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBLK29IYzIxMU5iUnJmbmIy
-            b3JqWWZRM1VlTGFDMHgvNkxmUWs0RCtXZmtzCnNxZjh3RWkyK0R6bFFhVitrc0tm
-            SFlFSmpFd2luVDJWajg5bTUycFRobTgKLS0tIGxMTmtoaFlXNkh3ZzE3NmVXVGhQ
-            RmV3WGN2bDRWWWtGOU5rUG1sQ1FMVjgK2FuPxCt82/kjoNBr9cp+zMdgNmWaLN32
-            xw0I9u7BvHYLMRAHWj08egEldZIYYoO6S8FDqq0o61N28Ua4j1J4Bw==
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBYaG1jV2lPRnR5bVJjOGhZ
+            NWkrV0xoWUM4MlMraEZFSmF0L0tGR2FHNWtrCkhuV2VIZ1VId0RtdU1uTnhmNGha
+            aC81eSt4RWFEQXF5c3ZmS084T0w0ZGMKLS0tIDdZcm5KYmRFU0pyNDRWQXY0ZW83
+            bldlaWlHV3JLbUFhV0N3Tk95eTJpbFUKeBRzPOHOVUPUtNshw/gSsYlmPBshvQUH
+            6lBa0AFSXNdJx/xYEqgfDVvNvmuwSJyhh6oD8pBCOvsQ5D1dn3xSWA==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-04-10T04:15:45Z"
-    mac: ENC[AES256_GCM,data:LtE8tFQrEIGLROZG1ObLad2BzIgyNu3//sJ/AJercWdRHhlzvixs5J6PxXbsNoOXlLA42WEK4QZYthPvotFN2RPhg41l5PX/IXt21FIHL9k9G3Wa4LxfMTfK3Khs8Efc+/QWQXw6b+C4ODcaOMFt0EO8ayaSf0BFhfdxxbSWOTE=,iv:ix/3xAYgPZlJv6qQQkbYurZqjip5zkAwKmMxnNYHIu4=,tag:UbAYxzM2bN7BeiPUIcopkg==,type:str]
+    lastmodified: "2026-04-15T18:50:32Z"
+    mac: ENC[AES256_GCM,data:U0xhnKLvoeruqthjvvI9h+FwosVMKhQ9q5JaMrknVxxXmg/dniBNCaLGCPJJEKqUVgt8TTNb5ad7riJRvDxQ5xYEHalxNrfZ8FNfw9DaVOWRlUJLC34yCPRqZ7aq1cSIiHmcSphi2mLuAe/1hq/hsPFW35TRF57uN2uWSmOlJU4=,iv:9Mz5Arph5O+UCJHthWlriUWeHLXb3dj7KF8ykf8qb/o=,tag:Ux1smhivlZer268PXvQxTA==,type:str]
     pgp: []
     encrypted_regex: ^(env)$
     version: 3.9.4

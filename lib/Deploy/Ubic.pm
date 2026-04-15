@@ -99,6 +99,9 @@ sub _build_bin_cmd ($self, $svc) {
     my $env = $svc->{env} // {};
     my $secrets = $self->config->load_secrets($svc->{name});
     my %all_env = (%$env, %$secrets);
+    # Drop empty values — emitting VAR='' breaks the outer single-quoted bin
+    # string and is equivalent to 'unset' for the app anyway.
+    delete $all_env{$_} for grep { !defined $all_env{$_} || !length $all_env{$_} } keys %all_env;
 
     my $env_str = '';
     if (%all_env) {
