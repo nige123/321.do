@@ -2066,7 +2066,6 @@ setInterval(loadServices, 30000);
                style="width:100%;justify-content:center;margin-top:8px;display:none">
                 VISIT &rarr;
             </a>
-            <div class="deploy-output" id="deploy-out"></div>
         </div>
     </div>
 
@@ -2152,6 +2151,8 @@ async function loadStatus() {
     }
 }
 
+let lastDeploySteps = null;
+
 async function initLogTabs() {
     const d = await api('/services');
     if (d.status !== 'success') return;
@@ -2159,16 +2160,18 @@ async function initLogTabs() {
     if (!svc) return;
 
     const tabs = document.getElementById('log-tabs');
-    const logTypes = ['stdout', 'stderr', 'app', 'ubic'];
+    const logTypes = ['deploy', 'stdout', 'stderr', 'app', 'ubic'];
     tabs.innerHTML = '';
     logTypes.forEach(type => {
         const btn = document.createElement('button');
         btn.className = 'log-type-tab';
+        btn.dataset.type = type;
         btn.textContent = type;
         btn.onclick = () => selectLogType(type, btn);
         tabs.appendChild(btn);
     });
-    const stderrTab = tabs.querySelector('.log-type-tab:nth-child(2)');
+    // default stderr on page load
+    const stderrTab = tabs.querySelector('.log-type-tab[data-type="stderr"]');
     if (stderrTab) selectLogType('stderr', stderrTab);
 }
 
@@ -2176,7 +2179,25 @@ async function selectLogType(type, btn) {
     currentLogType = type;
     document.querySelectorAll('.log-type-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    await loadLogs(type);
+    if (type === 'deploy') {
+        showDeployOutput();
+    } else {
+        await loadLogs(type);
+    }
+}
+
+function showDeployOutput() {
+    const content = document.getElementById('log-content');
+    if (lastDeploySteps && lastDeploySteps.length) {
+        renderDeploySteps(content, lastDeploySteps);
+    } else {
+        content.innerHTML = '<span class="log-empty">No deploys in this session yet. Press DEPLOY (or UPDATE/MIGRATE/RESTART when added) to see per-step output here.</span>';
+    }
+}
+
+function activateDeployTab() {
+    const tab = document.querySelector('.log-type-tab[data-type="deploy"]');
+    if (tab) selectLogType('deploy', tab);
 }
 
 async function loadLogs(type, n = 200) {
@@ -2286,24 +2307,24 @@ async function loadAnalysis() {
 
 async function deploy(isDev = false) {
     const btn = document.getElementById('deploy-btn');
-    const out = document.getElementById('deploy-out');
+    activateDeployTab();
+    const out = document.getElementById('log-content');
     btn.disabled = true;
     btn.classList.add('deploying');
     btn.innerHTML = '<span class="spinner"></span> IGNITION';
-    out.classList.add('visible');
-    out.innerHTML = '<span class="step-label">Initiating launch sequence...</span>\n';
+    out.innerHTML = '<span class="step-label">Initiating launch sequence...</span>';
 
     const endpoint = isDev ? '/service/' + SVC + '/deploy-dev' : '/service/' + SVC + '/deploy';
     try {
         const d = await api(endpoint, { method: 'POST' });
-        renderDeploySteps(out, d.data && d.data.steps);
+        lastDeploySteps = (d.data && d.data.steps) || [];
+        renderDeploySteps(out, lastDeploySteps);
         if (d.status === 'success') {
             toast(SVC + ' launched successfully');
         } else {
             toast(d.message || 'Launch sequence failed', 'error');
         }
     } catch(e) {
-        out.classList.add('visible');
         out.innerHTML = '<div class="step-fail">\u2717 ABORT: ' + esc(e.message) + '</div>';
         toast('Launch error: ' + e.message, 'error');
     }
