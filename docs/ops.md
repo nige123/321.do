@@ -60,7 +60,7 @@ In dev mode, `go` skips the git pull — you work directly in the checkout.
    repo: /home/s3/foo.web
    branch: master
    bin: bin/foo.pl
-   perlbrew: perl-5.42.1
+   perlbrew: perl-5.42.0
    targets:
      dev:
        host: dev.foo.do

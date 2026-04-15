@@ -90,7 +90,7 @@ END_UBIC
 
 sub _build_bin_cmd ($self, $svc) {
     my $runner   = $svc->{runner} // 'hypnotoad';
-    my $perlbrew = $svc->{perlbrew} // 'perl-5.42.1';
+    my $perlbrew = $svc->{perlbrew} // 'perl-5.42.0';
     my $repo     = $svc->{repo};
     my $bin      = "$repo/$svc->{bin}";
     my $port     = $svc->{port};

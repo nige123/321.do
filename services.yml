@@ -6,7 +6,7 @@ services:
     bin: bin/321.pl
     mode: production
     runner: hypnotoad
-    perlbrew: perl-5.42.1
+    perlbrew: perl-5.42.0
     port: 9321
     logs:
       stdout: /tmp/321.do.stdout.log
@@ -50,7 +50,7 @@ services:
     mode: production
     runner: hypnotoad
     port: 7007
-    perlbrew: perl-5.42.1
+    perlbrew: perl-5.42.0
     logs:
       stdout: /tmp/nh.web.stdout.log
       stderr: /tmp/nh.web.stderr.log

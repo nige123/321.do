@@ -11,7 +11,7 @@ use File::Path qw(make_path);
 my $domain     = '321.do';
 my $app_port   = 9321;
 my $app_dir    = '/home/s3/321.do';
-my $perl_ver   = 'perl-5.42.1';
+my $perl_ver   = 'perl-5.42.0';
 my $run_user   = (getpwuid((stat $app_dir)[4]))[0] // $ENV{SUDO_USER} // 'ubuntu';
 my $user_home  = (getpwnam($run_user))[7] // "/home/$run_user";
 my $nginx_conf = "/etc/nginx/sites-available/$domain";
