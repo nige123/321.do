@@ -139,6 +139,36 @@ sub deploy_dev ($self, $name) {
     return $self->deploy($name, skip_git => 1);
 }
 
+sub update ($self, $name) {
+    my $svc = $self->config->service($name);
+    return { status => 'error', message => "Unknown service: $name" } unless $svc;
+
+    my @steps;
+
+    my $s = $self->_step_apt_deps($svc);
+    push @steps, $s;
+    return $self->_deploy_result($name, 'error', 'System packages missing', \@steps)
+        unless ref $s->{success} ? ${$s->{success}} : $s->{success};
+
+    $s = $self->_step_git_pull($svc);
+    push @steps, $s;
+    return $self->_deploy_result($name, 'error', 'Git pull failed', \@steps)
+        unless $s->{success};
+
+    $s = $self->_step_cpanm($svc);
+    push @steps, $s;
+    $self->log->warn("cpanm failed for $name: $s->{output}") unless $s->{success};
+
+    if (-x "$svc->{repo}/bin/migrate") {
+        $s = $self->_step_migrate($svc);
+        push @steps, $s;
+        return $self->_deploy_result($name, 'error', 'Migration failed', \@steps)
+            unless $s->{success};
+    }
+
+    return $self->_deploy_result($name, 'success', "Updated $name (no restart)", \@steps);
+}
+
 sub _check_apt_deps ($self, $svc) {
     my $deps = $svc->{apt_deps} // [];
     return (1, 'no apt_deps declared') unless @$deps;

@@ -27,8 +27,11 @@ sub make_fixture {
     path($home, 'services')->mkpath;
     path($home, 'secrets')->mkpath;
 
+    my $remote = path(tempdir(CLEANUP => 1), 'demo.git')->stringify;
+    system("git init -q --bare $remote");
+
     my $repo = tempdir(CLEANUP => 1);
-    system("cd $repo && git init -q && git config user.email t\@t && git config user.name t && git commit --allow-empty -m init -q");
+    system("cd $repo && git init -q && git config user.email t\@t && git config user.name t && git commit --allow-empty -m init -q && git branch -M master && git remote add origin $remote && git push -q origin master 2>/dev/null");
     path($repo, 'cpanfile')->spew_utf8("requires 'perl', '5.010';\n");
 
     path($home, 'services', 'demo.web.yml')->spew_utf8(<<"YAML");
@@ -135,6 +138,38 @@ subtest 'deploy aborts before restart when migrate fails' => sub {
     like $r->{message}, qr/Migration failed/i,     'message names the failure';
     my @steps = map { $_->{step} } @{ $r->{data}{steps} };
     ok !(grep { $_ eq 'ubic_restart' } @steps),    'no restart after failed migrate';
+};
+
+subtest 'update: runs git_pull+cpanm+migrate, no restart' => sub {
+    my ($home, $repo) = make_fixture();
+    path($repo, 'bin')->mkpath;
+    path($repo, 'bin/migrate')->spew_utf8('#!/bin/sh' . "\n" . 'echo migrated' . "\n");
+    chmod 0755, "$repo/bin/migrate";
+
+    my $svc_mgr = TestService->new(
+        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        log    => Mojo::Log->new(level => 'fatal'),
+    );
+    my $r = $svc_mgr->update('demo.web');
+    my @steps = map { $_->{step} } @{ $r->{data}{steps} };
+    is_deeply \@steps, [qw(apt_deps git_pull cpanm migrate)],
+        'update skips restart + port_check';
+    is $r->{status}, 'success', 'update reports success';
+};
+
+subtest 'update: aborts on git_pull failure' => sub {
+    my ($home, $repo) = make_fixture();
+    # Remove the repo's .git dir so git fetch fails
+    path($repo, '.git')->remove_tree({safe => 0});
+
+    my $svc_mgr = TestService->new(
+        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        log    => Mojo::Log->new(level => 'fatal'),
+    );
+    my $r = $svc_mgr->update('demo.web');
+    my @steps = map { $_->{step} } @{ $r->{data}{steps} };
+    is_deeply \@steps, [qw(apt_deps git_pull)], 'short-circuits on git failure';
+    is $r->{status}, 'error';
 };
 
 done_testing;
