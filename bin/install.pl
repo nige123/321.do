@@ -138,10 +138,12 @@ system("$perlbrew cpanm Ubic Ubic::Service::SimpleDaemon") == 0
 
 # Bootstrap ubic per-user (--local) rather than system-wide. Config lands in
 # $HOME/.ubic.cfg, data/logs under $HOME/ubic/, services run as $run_user.
-# The existence of ~/.ubic.cfg is ubic's own "already configured" marker.
+# Service-dir is $HOME/ubic/service (ubic's default for --local) — ubic installs
+# its own watchdog services there alongside the symlinks Deploy::Ubic makes to
+# our project's ubic/service/<group>/<name> files.
 unless (-f "$user_home/.ubic.cfg") {
     say "  Running ubic-admin setup (first-time ubic bootstrap, --local)...";
-    system("su - $run_user -c '$perlbrew ubic-admin setup --batch-mode --local --service-dir $app_dir/ubic/service'") == 0
+    system("su - $run_user -c '$perlbrew ubic-admin setup --batch-mode --local'") == 0
         or die "ubic-admin setup failed\n";
 }
 
