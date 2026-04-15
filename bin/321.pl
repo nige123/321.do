@@ -1091,13 +1091,12 @@ body::after {
     margin-top: 14px;
     background: var(--void);
     border: 1px solid var(--border);
-    padding: 12px 14px;
-    font-size: 15px;
-    line-height: 1.8;
-    max-height: 200px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-height: 520px;
     overflow-y: auto;
     color: var(--text-1);
-    white-space: pre;
 }
 
 .deploy-output.visible { display: block; }
@@ -1105,6 +1104,31 @@ body::after {
 .deploy-output .step-ok { color: var(--phosphor); text-shadow: 0 0 8px var(--phosphor-glow); }
 .deploy-output .step-fail { color: var(--red); text-shadow: 0 0 8px var(--red-glow); }
 .deploy-output .step-label { color: var(--text-2); }
+
+.deploy-step { margin: 4px 0; }
+.deploy-step > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 2px 4px;
+    font-family: var(--mono);
+}
+.deploy-step > summary::-webkit-details-marker { display: none; }
+.deploy-step > summary:hover { background: var(--panel-2); }
+.deploy-step[open] > summary { background: var(--panel-2); }
+.deploy-step .step-body {
+    margin: 4px 0 8px 20px;
+    padding: 8px 10px;
+    background: var(--panel);
+    border-left: 2px solid var(--border-hi);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-0);
+    max-height: 360px;
+    overflow-y: auto;
+}
+.deploy-step[data-ok="0"] .step-body { border-left-color: var(--red); }
 
 /* ═══ TERMINAL ═══ */
 
@@ -1677,6 +1701,34 @@ async function api(path, opts = {}) {
     return res.json();
 }
 
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderDeploySteps(out, steps) {
+    out.classList.add('visible');
+    out.innerHTML = '';
+    if (!Array.isArray(steps)) return;
+    let anyFail = false;
+    for (const step of steps) {
+        const ok = (typeof step.success === 'boolean') ? step.success : step.success === 1;
+        if (!ok) anyFail = true;
+        const icon = ok ? '\u2713' : '\u2717';
+        const cls = ok ? 'step-ok' : 'step-fail';
+        const body = (step.output || '').replace(/\r\n?/g, '\n').replace(/\r/g, '');
+        const firstLine = body.split('\n').find(l => l.trim().length) || '';
+        const details = document.createElement('details');
+        details.className = 'deploy-step';
+        details.dataset.ok = ok ? '1' : '0';
+        details.open = !ok;  // auto-expand failures
+        details.innerHTML =
+            '<summary><span class="' + cls + '">' + icon + '</span> ' +
+            '<span class="step-label">' + esc(step.step) + '</span> ' +
+            '<span style="color:var(--text-2)">' + esc(firstLine.slice(0, 140)) + '</span></summary>' +
+            '<div class="step-body">' + esc(body || '(no output)') + '</div>';
+        out.appendChild(details);
+    }
+    return anyFail;
+}
+
 async function loadHealth() {
     try {
         const d = await api('/health');
@@ -1958,22 +2010,15 @@ async function deployService(name, btn, isDev = false) {
     const endpoint = isDev ? '/service/' + name + '/deploy-dev' : '/service/' + name + '/deploy';
     try {
         const d = await api(endpoint, { method: 'POST' });
-        out.innerHTML = '';
-        if (d.data && d.data.steps) {
-            d.data.steps.forEach(step => {
-                const ok = (typeof step.success === 'boolean') ? step.success : step.success;
-                const cls = ok ? 'step-ok' : 'step-fail';
-                const icon = ok ? '\u2713' : '\u2717';
-                out.innerHTML += `<span class="${cls}">${icon}</span> <span class="step-label">${step.step}</span>  ${(step.output||'').substring(0, 120)}\n`;
-            });
-        }
+        renderDeploySteps(out, d.data && d.data.steps);
         if (d.status === 'success') {
             toast(name + ' launched successfully');
         } else {
             toast(d.message || 'Launch sequence failed', 'error');
         }
     } catch(e) {
-        out.innerHTML += '<span class="step-fail">\u2717 ABORT: ' + e.message + '</span>\n';
+        out.classList.add('visible');
+        out.innerHTML = '<div class="step-fail">\u2717 ABORT: ' + esc(e.message) + '</div>';
         toast('Launch failed: ' + e.message, 'error');
     }
 
@@ -2233,22 +2278,15 @@ async function deploy(isDev = false) {
     const endpoint = isDev ? '/service/' + SVC + '/deploy-dev' : '/service/' + SVC + '/deploy';
     try {
         const d = await api(endpoint, { method: 'POST' });
-        out.innerHTML = '';
-        if (d.data && d.data.steps) {
-            d.data.steps.forEach(step => {
-                const ok = (typeof step.success === 'boolean') ? step.success : step.success;
-                const cls = ok ? 'step-ok' : 'step-fail';
-                const icon = ok ? '\u2713' : '\u2717';
-                out.innerHTML += '<span class="' + cls + '">' + icon + '</span> <span class="step-label">' + step.step + '</span>  ' + (step.output||'').substring(0, 200) + '\n';
-            });
-        }
+        renderDeploySteps(out, d.data && d.data.steps);
         if (d.status === 'success') {
             toast(SVC + ' launched successfully');
         } else {
             toast(d.message || 'Launch sequence failed', 'error');
         }
     } catch(e) {
-        out.innerHTML += '<span class="step-fail">\u2717 ABORT: ' + e.message + '</span>\n';
+        out.classList.add('visible');
+        out.innerHTML = '<div class="step-fail">\u2717 ABORT: ' + esc(e.message) + '</div>';
         toast('Launch error: ' + e.message, 'error');
     }
 
