@@ -2061,6 +2061,11 @@ setInterval(loadServices, 30000);
             <button class="btn btn-deploy" id="deploy-btn" onclick="deploy()" style="width:100%;justify-content:center">
                 DEPLOY
             </button>
+            <a id="visit-btn" href="#" target="_blank" rel="noopener"
+               class="btn btn-tint"
+               style="width:100%;justify-content:center;margin-top:8px;display:none">
+                VISIT &rarr;
+            </a>
             <div class="deploy-output" id="deploy-out"></div>
         </div>
     </div>
@@ -2131,6 +2136,19 @@ async function loadStatus() {
         deployBtn.className = 'btn btn-deploy-dev';
         deployBtn.setAttribute('onclick', 'deploy(true)');
         if (!deployBtn.classList.contains('deploying')) deployBtn.innerHTML = 'DEPLOY DEV';
+    }
+
+    const visit = document.getElementById('visit-btn');
+    if (s.host && s.host !== 'localhost') {
+        visit.href = 'https://' + s.host + '/';
+        visit.style.display = '';
+        visit.textContent = 'VISIT ' + s.host + ' \u2192';
+    } else if (s.port) {
+        visit.href = 'http://127.0.0.1:' + s.port + '/';
+        visit.style.display = '';
+        visit.textContent = 'VISIT :' + s.port + ' \u2192';
+    } else {
+        visit.style.display = 'none';
     }
 }
 
