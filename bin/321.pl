@@ -5,6 +5,7 @@
 
 use Mojolicious::Lite -signatures;
 use Mojo::File qw(curfile);
+use Mojo::Util qw(decode);
 
 app->config(hypnotoad => {listen => ['http://127.0.0.1:9321']});
 unshift @{app->commands->namespaces}, 'Deploy::Command';
@@ -17,6 +18,7 @@ use Deploy::Service;
 use Deploy::Logs;
 use Deploy::Ubic;
 use Deploy::Nginx;
+use Text::Markdown qw(markdown);
 
 # --- Config ---
 
@@ -400,6 +402,13 @@ get '/ui/service/#name' => sub ($c) {
     $c->render('service_detail');
 };
 
+get '/docs' => sub ($c) {
+    my $file = $app_home->child('docs', 'ops.md');
+    return $c->render(text => 'Docs not found', status => 404) unless -f $file;
+    my $html = markdown(decode('UTF-8', $file->slurp));
+    $c->render(template => 'docs', doc_html => $html);
+};
+
 app->start;
 
 __DATA__
@@ -575,6 +584,23 @@ body::after {
     border: 1px solid var(--dev-dim);
     padding: 3px 10px;
     letter-spacing: 2px;
+}
+
+.mission-link {
+    font-family: var(--display);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: var(--text-2);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid transparent;
+    transition: color 120ms, border-color 120ms;
+}
+
+.mission-link:hover {
+    color: var(--phosphor);
+    border-color: var(--phosphor-faint);
 }
 
 .mission-clock {
@@ -1619,6 +1645,7 @@ body::after {
     <div class="dev-badge">DEV MODE</div>
 % }
     <div class="mission-title">MISSION CONTROL</div>
+    <a href="/docs" class="mission-link">DOCS</a>
     <div class="target-switch" id="target-switch"></div>
     <div class="mission-clock" id="mission-clock">--:--:--</div>
     <div id="git-badge" class="git-badge synced" onclick="gitPush()" title="Click to push">
@@ -2466,3 +2493,67 @@ loadNginxStatus();
 setInterval(loadStatus, 10000);
 </script>
 % end
+
+@@ docs.html.ep
+% layout 'ops';
+% title 'Docs';
+
+<div class="page-header">
+    <div class="page-title"><a href="/" class="back-link">&larr;</a> DOCS</div>
+</div>
+
+<article class="doc-panel">
+<%== $doc_html %>
+</article>
+
+<style>
+.doc-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 32px 40px;
+    max-width: 880px;
+    margin: 0 auto;
+    color: var(--text-0);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.65;
+}
+.doc-panel h1, .doc-panel h2, .doc-panel h3 {
+    font-family: var(--display);
+    color: var(--phosphor);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 28px 0 14px;
+}
+.doc-panel h1 { font-size: 22px; border-bottom: 1px solid var(--border-hi); padding-bottom: 10px; margin-top: 0; }
+.doc-panel h2 { font-size: 16px; color: var(--amber); }
+.doc-panel h3 { font-size: 13px; color: var(--cyan); }
+.doc-panel p  { margin: 10px 0; }
+.doc-panel ul, .doc-panel ol { margin: 10px 0 10px 22px; }
+.doc-panel li { margin: 4px 0; }
+.doc-panel code {
+    background: var(--panel-3);
+    color: var(--amber);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 13px;
+}
+.doc-panel pre {
+    background: var(--void);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+.doc-panel pre code {
+    background: transparent;
+    color: var(--text-0);
+    padding: 0;
+}
+.doc-panel a { color: var(--cyan); text-decoration: none; border-bottom: 1px dotted var(--cyan); }
+.doc-panel a:hover { color: var(--phosphor); border-bottom-color: var(--phosphor); }
+.doc-panel hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+.doc-panel strong { color: var(--phosphor-mid); font-weight: 600; }
+.doc-panel em { color: var(--text-0); font-style: italic; }
+</style>
+
