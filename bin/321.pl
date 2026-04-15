@@ -169,8 +169,32 @@ post '/service/#name/deploy-dev' => sub ($c) {
     $c->render(json => $result);
 };
 
-# Start/stop/restart a service via ubic
-for my $action (qw(start stop restart)) {
+# Update (git pull + cpanm + migrate, no restart)
+post '/service/#name/update' => sub ($c) {
+    my $name = $c->param('name');
+    return unless $c->validate_service($name);
+    my $result = $service_mgr->update($name);
+    $c->render(json => $result);
+};
+
+# Run database migrations only
+post '/service/#name/migrate' => sub ($c) {
+    my $name = $c->param('name');
+    return unless $c->validate_service($name);
+    my $result = $service_mgr->migrate($name);
+    $c->render(json => $result);
+};
+
+# Restart via service manager (ubic restart + port check)
+post '/service/#name/restart' => sub ($c) {
+    my $name = $c->param('name');
+    return unless $c->validate_service($name);
+    my $result = $service_mgr->restart($name);
+    $c->render(json => $result);
+};
+
+# Start/stop a service via ubic
+for my $action (qw(start stop)) {
     post "/service/#name/$action" => sub ($c) {
         my $name = $c->param('name');
         return unless $c->validate_service($name);
