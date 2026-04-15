@@ -47,45 +47,85 @@ sub deploy ($self, $name, %opts) {
 
     my $skip_git = $opts{skip_git} // 0;
     my @steps;
-    my $repo   = $svc->{repo};
-    my $branch = $svc->{branch} // 'master';
-    my ($ok, $out);
 
-    ($ok, $out) = $self->_check_apt_deps($svc);
-    push @steps, { step => 'apt_deps', success => $ok ? \1 : \0, output => $out };
-    return $self->_deploy_result($name, 'error', 'System packages missing', \@steps) unless $ok;
+    my $s = $self->_step_apt_deps($svc);
+    push @steps, $s;
+    my $apt_ok = ref $s->{success} ? ${$s->{success}} : $s->{success};
+    return $self->_deploy_result($name, 'error', 'System packages missing', \@steps)
+        unless $apt_ok;
 
     unless ($skip_git) {
-        ($ok, $out) = $self->_run_in_dir($repo, "git fetch origin && git reset --hard origin/$branch");
-        push @steps, { step => 'git_pull', success => $ok, output => $out };
-        return $self->_deploy_result($name, 'error', 'Git pull failed', \@steps) unless $ok;
+        $s = $self->_step_git_pull($svc);
+        push @steps, $s;
+        return $self->_deploy_result($name, 'error', 'Git pull failed', \@steps)
+            unless $s->{success};
     }
 
-    ($ok, $out) = $self->_run_in_dir($repo, $self->_cpanm_cmd($svc->{perlbrew}));
-    push @steps, { step => 'cpanm', success => $ok, output => $out };
-    $self->log->warn("cpanm failed for $name: $out") unless $ok;
+    $s = $self->_step_cpanm($svc);
+    push @steps, $s;
+    $self->log->warn("cpanm failed for $name: $s->{output}") unless $s->{success};
+
+    if (-x "$svc->{repo}/bin/migrate") {
+        $s = $self->_step_migrate($svc);
+        push @steps, $s;
+        return $self->_deploy_result($name, 'error', 'Migration failed', \@steps)
+            unless $s->{success};
+    }
 
     if ($self->ubic_mgr) {
         my $gen = $self->ubic_mgr->generate($name);
         push @steps, { step => 'generate_ubic', success => \1, output => "Generated: $gen->{path}" };
     }
 
-    ($ok, $out) = $self->_run_cmd("ubic restart $name");
-    push @steps, { step => 'ubic_restart', success => $ok, output => $out };
-    return $self->_deploy_result($name, 'error', 'Ubic restart failed', \@steps) unless $ok;
+    $s = $self->_step_ubic_restart($name);
+    push @steps, $s;
+    return $self->_deploy_result($name, 'error', 'Ubic restart failed', \@steps)
+        unless $s->{success};
 
     sleep 2;
-    my $port_ok = $self->_check_port($svc->{port});
-    push @steps, { step => 'port_check', success => $port_ok ? \1 : \0, output => $port_ok ? "Port $svc->{port} responding" : "Port $svc->{port} not responding" };
+    $s = $self->_step_port_check($svc);
+    push @steps, $s;
 
     $self->_log_deploy($name, \@steps);
 
     my $tag = $skip_git ? ' (dev)' : '';
+    my $port_ok = ref $s->{success} ? ${$s->{success}} : $s->{success};
     my $final_status = $port_ok ? 'success' : 'error';
     my $final_msg = $port_ok
         ? "Deployed $name$tag successfully"
         : "Deployed $name$tag but port check failed";
     return $self->_deploy_result($name, $final_status, $final_msg, \@steps);
+}
+
+sub _step_apt_deps ($self, $svc) {
+    my ($ok, $out) = $self->_check_apt_deps($svc);
+    return { step => 'apt_deps', success => $ok ? \1 : \0, output => $out };
+}
+
+sub _step_git_pull ($self, $svc) {
+    my $branch = $svc->{branch} // 'master';
+    my ($ok, $out) = $self->_run_in_dir($svc->{repo},
+        "git fetch origin && git reset --hard origin/$branch");
+    return { step => 'git_pull', success => $ok, output => $out };
+}
+
+sub _step_cpanm ($self, $svc) {
+    my ($ok, $out) = $self->_run_in_dir($svc->{repo}, $self->_cpanm_cmd($svc->{perlbrew}));
+    return { step => 'cpanm', success => $ok, output => $out };
+}
+
+sub _step_ubic_restart ($self, $name) {
+    my ($ok, $out) = $self->_run_cmd("ubic restart $name");
+    return { step => 'ubic_restart', success => $ok, output => $out };
+}
+
+sub _step_port_check ($self, $svc) {
+    my $ok = $self->_check_port($svc->{port});
+    return {
+        step    => 'port_check',
+        success => $ok ? \1 : \0,
+        output  => $ok ? "Port $svc->{port} responding" : "Port $svc->{port} not responding",
+    };
 }
 
 sub deploy_dev ($self, $name) {
