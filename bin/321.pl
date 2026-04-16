@@ -517,7 +517,7 @@ __DATA__
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= title %> — 321.do MISSION CONTROL</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23010a01'/%3E%3Ccircle cx='16' cy='16' r='12' stroke='%2300ff41' stroke-width='1.5' fill='none' opacity='.4'/%3E%3Ccircle cx='16' cy='16' r='12' stroke='%2300ff41' stroke-width='2' stroke-dasharray='75' stroke-dashoffset='56' fill='none'/%3E%3Cline x1='16' y1='2' x2='16' y2='6' stroke='%2300ff41' stroke-width='.7' opacity='.5'/%3E%3Cline x1='16' y1='26' x2='16' y2='30' stroke='%2300ff41' stroke-width='.7' opacity='.5'/%3E%3Cline x1='2' y1='16' x2='6' y2='16' stroke='%2300ff41' stroke-width='.7' opacity='.5'/%3E%3Cline x1='26' y1='16' x2='30' y2='16' stroke='%2300ff41' stroke-width='.7' opacity='.5'/%3E%3Ctext x='16' y='20' text-anchor='middle' fill='%2300ff41' font-family='sans-serif' font-weight='900' font-size='10'%3E321%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23010a01'/%3E%3Cpolygon points='12,8 12,24 26,16' fill='%2300ff41'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -655,12 +655,7 @@ body::after {
 }
 
 .mission-logo .logo-svg {
-    filter: drop-shadow(0 0 8px rgba(0, 255, 65, 0.4));
-}
-
-.mission-logo .logo-sweep {
-    transform-origin: center;
-    animation: logo-spin 6s linear infinite;
+    filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.3));
 }
 
 .mission-title {
@@ -2037,14 +2032,8 @@ body::after {
 
 <div class="mission-bar">
     <a href="/" class="mission-logo">
-        <svg class="logo-svg" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="18" cy="18" r="16" stroke="currentColor" stroke-width="1" opacity="0.3"/>
-            <circle cx="18" cy="18" r="16" stroke="currentColor" stroke-width="1.5" stroke-dasharray="100" stroke-dashoffset="75" class="logo-sweep"/>
-            <line x1="18" y1="2" x2="18" y2="7" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
-            <line x1="18" y1="29" x2="18" y2="34" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
-            <line x1="2" y1="18" x2="7" y2="18" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
-            <line x1="29" y1="18" x2="34" y2="18" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
-            <text x="18" y="22" text-anchor="middle" fill="currentColor" font-family="'Orbitron', sans-serif" font-weight="700" font-size="11">321</text>
+        <svg class="logo-svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <polygon points="8,4 8,24 24,14" fill="currentColor"/>
         </svg>
         <span>.do</span>
     </a>
