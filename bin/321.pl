@@ -2136,7 +2136,7 @@ setInterval(updateClock, 1000);
 % title 'Dashboard';
 
 <div class="page-header">
-    <div class="page-title">SUBSYSTEM STATUS</div>
+    <div class="page-title">SERVICE STATUS</div>
     <div class="page-subtitle">All subsystems monitored</div>
 </div>
 
