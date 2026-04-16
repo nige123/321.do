@@ -21,7 +21,7 @@ sub status ($self, $name) {
         name    => $name,
         pid     => $pid,
         port    => $svc->{port},
-        running => ($pid && $port_ok) ? \1 : \0,
+        running => $port_ok ? \1 : \0,
         git_sha => $git_sha,
         repo    => $svc->{repo},
         branch  => $svc->{branch},
@@ -292,13 +292,16 @@ sub _get_pid ($self, $name, $svc) {
         return $1;
     }
 
-    # Fallback: check hypnotoad.pid
-    my $pidfile = path($svc->{repo}, 'hypnotoad.pid');
-    return undef unless $pidfile->exists;
-    my $pid = $pidfile->slurp;
-    $pid =~ s/\s+//g;
-    return undef unless $pid =~ /^\d+$/;
-    return kill(0, $pid) ? $pid : undef;
+    # Fallback: check hypnotoad.pid (may be in bin/ or repo root)
+    for my $loc ('bin/hypnotoad.pid', 'hypnotoad.pid') {
+        my $pidfile = path($svc->{repo}, $loc);
+        next unless $pidfile->exists;
+        my $pid = $pidfile->slurp;
+        $pid =~ s/\s+//g;
+        next unless $pid =~ /^\d+$/;
+        return $pid if kill(0, $pid);
+    }
+    return undef;
 }
 
 sub _git_sha ($self, $repo) {
