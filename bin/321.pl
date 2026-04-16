@@ -492,7 +492,7 @@ body {
     background-size: 100% 100%, 48px 48px, 48px 48px;
     color: var(--text-0);
     font-family: var(--mono);
-    font-size: 18px;
+    font-size: 22px;
     line-height: 1.5;
     min-height: 100vh;
     overflow-x: hidden;
@@ -570,7 +570,7 @@ body::after {
 .mission-logo {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 16px;
+    font-size: 19px;
     color: var(--phosphor);
     text-decoration: none;
     display: flex;
@@ -591,7 +591,7 @@ body::after {
 
 .mission-title {
     font-family: var(--display);
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 500;
     letter-spacing: 4px;
     color: var(--text-2);
@@ -601,7 +601,7 @@ body::after {
 
 .dev-badge {
     font-family: var(--display);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--dev);
     background: var(--dev-glow);
@@ -612,7 +612,7 @@ body::after {
 
 .mission-link {
     font-family: var(--display);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     letter-spacing: 3px;
     color: var(--text-2);
@@ -629,7 +629,7 @@ body::after {
 
 .mission-clock {
     font-family: var(--display);
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 400;
     color: var(--phosphor-mid);
     letter-spacing: 2px;
@@ -638,7 +638,7 @@ body::after {
 }
 
 .health-badge {
-    font-size: 15px;
+    font-size: 18px;
     padding: 4px 12px;
     display: flex;
     align-items: center;
@@ -670,7 +670,7 @@ body::after {
 
 .target-btn {
     font-family: var(--display);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 2px;
     padding: 4px 14px;
@@ -697,7 +697,7 @@ body::after {
 }
 
 .git-badge {
-    font-size: 16px;
+    font-size: 19px;
     padding: 4px 12px;
     display: flex;
     align-items: center;
@@ -746,7 +746,7 @@ body::after {
 .page-title {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 22px;
+    font-size: 26px;
     letter-spacing: 3px;
     text-transform: uppercase;
     color: var(--phosphor);
@@ -759,11 +759,11 @@ body::after {
     animation: blink-cursor 1s step-end infinite;
     color: var(--phosphor);
     margin-left: 4px;
-    font-size: 18px;
+    font-size: 22px;
 }
 
 .page-subtitle {
-    font-size: 16px;
+    font-size: 19px;
     color: var(--text-2);
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -866,7 +866,7 @@ body::after {
 
 .svc-name {
     font-family: var(--display);
-    font-size: 16px;
+    font-size: 19px;
     font-weight: 600;
     letter-spacing: 1px;
 }
@@ -908,7 +908,7 @@ body::after {
 
 .mode-badge {
     font-family: var(--display);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: 2px;
     padding: 2px 8px;
@@ -935,13 +935,13 @@ body::after {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 4px 16px;
-    font-size: 16px;
+    font-size: 19px;
     margin-bottom: 16px;
 }
 
 .svc-meta dt {
     color: var(--text-2);
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 2px;
     text-transform: uppercase;
     padding-top: 2px;
@@ -949,7 +949,7 @@ body::after {
 
 .svc-meta dd {
     color: var(--phosphor-mid);
-    font-size: 16px;
+    font-size: 19px;
 }
 
 /* ═══ CONTROLS ═══ */
@@ -964,7 +964,7 @@ body::after {
 
 .btn {
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 1px;
     text-transform: uppercase;
     padding: 7px 14px;
@@ -991,7 +991,7 @@ body::after {
 }
 
 .btn-ctrl {
-    font-size: 13px;
+    font-size: 16px;
     letter-spacing: 2px;
     padding: 5px 10px;
 }
@@ -1015,7 +1015,7 @@ body::after {
 .btn-deploy {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 3px;
     padding: 10px 20px;
     background: rgba(0, 255, 65, 0.05);
@@ -1063,7 +1063,7 @@ body::after {
 .btn-deploy-dev {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 3px;
     padding: 10px 20px;
     background: rgba(179, 136, 255, 0.05);
@@ -1116,7 +1116,7 @@ body::after {
     background: var(--void);
     border: 1px solid var(--border);
     padding: 10px 12px;
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1.5;
     max-height: 520px;
     overflow-y: auto;
@@ -1133,7 +1133,7 @@ body::after {
 .lifecycle-row .btn {
     flex: 1;
     justify-content: center;
-    font-size: 11px;
+    font-size: 13px;
     padding: 6px 8px;
 }
 
@@ -1159,7 +1159,7 @@ body::after {
     white-space: pre-wrap;
     word-break: break-word;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 14px;
     color: var(--text-0);
     max-height: 360px;
     overflow-y: auto;
@@ -1193,7 +1193,7 @@ body::after {
 
 .log-type-tab {
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 18px;
     padding: 5px 12px;
     border: none;
     background: transparent;
@@ -1220,7 +1220,7 @@ body::after {
 
 .log-search input {
     font-family: var(--mono);
-    font-size: 16px;
+    font-size: 19px;
     padding: 5px 10px;
     background: var(--void);
     border: 1px solid var(--border);
@@ -1240,7 +1240,7 @@ body::after {
 
 .log-content {
     padding: 14px;
-    font-size: 15px;
+    font-size: 18px;
     line-height: 1.7;
     max-height: 500px;
     overflow-y: auto;
@@ -1266,7 +1266,7 @@ body::after {
     padding: 40px 0;
     letter-spacing: 2px;
     text-transform: uppercase;
-    font-size: 15px;
+    font-size: 18px;
 }
 
 /* ═══ DIAGNOSTICS ═══ */
@@ -1286,7 +1286,7 @@ body::after {
 
 .analysis-card h3 {
     font-family: var(--display);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -1300,7 +1300,7 @@ body::after {
     align-items: center;
     padding: 6px 0;
     border-bottom: 1px solid rgba(0, 255, 65, 0.04);
-    font-size: 16px;
+    font-size: 19px;
 }
 
 .stat-row:last-child { border-bottom: none; }
@@ -1317,7 +1317,7 @@ body::after {
 }
 
 .status-code-chip {
-    font-size: 16px;
+    font-size: 19px;
     padding: 4px 10px;
     display: flex;
     gap: 6px;
@@ -1375,7 +1375,7 @@ body::after {
 
 .detail-info h2 {
     font-family: var(--display);
-    font-size: 16px;
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: 2px;
     margin-bottom: 16px;
@@ -1390,13 +1390,13 @@ body::after {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 8px 16px;
-    font-size: 16px;
+    font-size: 19px;
     margin-bottom: 20px;
 }
 
 .detail-meta dt {
     color: var(--text-2);
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 2px;
     text-transform: uppercase;
     padding-top: 2px;
@@ -1404,13 +1404,13 @@ body::after {
 
 .detail-meta dd {
     color: var(--phosphor-mid);
-    font-size: 16px;
+    font-size: 19px;
     word-break: break-all;
 }
 
 .section-title {
     font-family: var(--display);
-    font-size: 16px;
+    font-size: 19px;
     font-weight: 600;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -1454,7 +1454,7 @@ body::after {
 
 .config-target-tab {
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 18px;
     padding: 5px 12px;
     border: none;
     background: transparent;
@@ -1486,7 +1486,7 @@ body::after {
 }
 
 .config-label {
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--text-2);
@@ -1494,7 +1494,7 @@ body::after {
 
 .config-input {
     font-family: var(--mono);
-    font-size: 16px;
+    font-size: 19px;
     padding: 6px 10px;
     background: var(--panel);
     border: 1px solid var(--border);
@@ -1522,7 +1522,7 @@ body::after {
 
 .config-section-label {
     font-family: var(--display);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 3px;
     color: var(--text-2);
@@ -1541,7 +1541,7 @@ body::after {
 
 .add-form-title {
     font-family: var(--display);
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 700;
     letter-spacing: 3px;
     color: var(--text-2);
@@ -1551,7 +1551,7 @@ body::after {
 .add-subsystem-btn {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 3px;
     padding: 12px 24px;
     background: transparent;
@@ -1586,7 +1586,7 @@ body::after {
 }
 
 .toast {
-    font-size: 15px;
+    font-size: 18px;
     padding: 10px 16px;
     border: 1px solid var(--border);
     background: var(--panel);
@@ -1679,7 +1679,7 @@ body::after {
     .analysis-grid { grid-template-columns: 1fr; }
     .svc-grid { grid-template-columns: 1fr; }
     .mission-title { display: none; }
-    .mission-clock { font-size: 11px; }
+    .mission-clock { font-size: 13px; }
 }
 
 </style>
@@ -2321,7 +2321,7 @@ async function loadAnalysis() {
             html += '<div class="stat-row"><span class="stat-label">' + escHtml(e.pattern.substring(0,60)) + '</span><span class="stat-value error">\u00d7' + e.count + '</span></div>';
         });
     } else {
-        html += '<span class="stat-value ok" style="font-size:14px">No errors detected</span>';
+        html += '<span class="stat-value ok" style="font-size: 17px">No errors detected</span>';
     }
     html += '</div>';
 
@@ -2331,7 +2331,7 @@ async function loadAnalysis() {
             html += '<div class="stat-row"><span class="stat-label">' + escHtml(w.pattern.substring(0,60)) + '</span><span class="stat-value warn">\u00d7' + w.count + '</span></div>';
         });
     } else {
-        html += '<span class="stat-value ok" style="font-size:14px">No warnings detected</span>';
+        html += '<span class="stat-value ok" style="font-size: 17px">No warnings detected</span>';
     }
     html += '</div>';
 
@@ -2438,7 +2438,7 @@ async function loadConfig() {
         input.id = 'new-target-input';
         input.className = 'config-input';
         input.placeholder = 'staging';
-        input.style.cssText = 'width:80px;padding:3px 8px;font-size:13px';
+        input.style.cssText = 'width:80px;padding:3px 8px;font-size: 16px';
         input.onkeydown = (e) => {
             if (e.key === 'Enter') {
                 const name = input.value.trim();
@@ -2480,7 +2480,7 @@ function renderConfigFields(targetName) {
     Object.entries(env).forEach(([k, v]) => {
         html += configRow(k, 'cfg-env-' + k, v, true);
     });
-    html += '<div class="config-row"><span class="config-label"></span><button class="btn" onclick="addEnvVar()" style="font-size:11px">+ ADD VAR</button></div>';
+    html += '<div class="config-row"><span class="config-label"></span><button class="btn" onclick="addEnvVar()" style="font-size: 13px">+ ADD VAR</button></div>';
 
     fields.innerHTML = html;
     fields.querySelectorAll('.config-input').forEach(el => {
@@ -2661,7 +2661,7 @@ setInterval(loadStatus, 10000);
     margin: 0 auto;
     color: var(--text-0);
     font-family: var(--mono);
-    font-size: 14px;
+    font-size: 17px;
     line-height: 1.65;
 }
 .doc-panel h1, .doc-panel h2, .doc-panel h3 {
@@ -2671,9 +2671,9 @@ setInterval(loadStatus, 10000);
     text-transform: uppercase;
     margin: 28px 0 14px;
 }
-.doc-panel h1 { font-size: 22px; border-bottom: 1px solid var(--border-hi); padding-bottom: 10px; margin-top: 0; }
-.doc-panel h2 { font-size: 16px; color: var(--amber); }
-.doc-panel h3 { font-size: 13px; color: var(--cyan); }
+.doc-panel h1 { font-size: 26px; border-bottom: 1px solid var(--border-hi); padding-bottom: 10px; margin-top: 0; }
+.doc-panel h2 { font-size: 19px; color: var(--amber); }
+.doc-panel h3 { font-size: 16px; color: var(--cyan); }
 .doc-panel p  { margin: 10px 0; }
 .doc-panel ul, .doc-panel ol { margin: 10px 0 10px 22px; }
 .doc-panel li { margin: 4px 0; }
@@ -2682,7 +2682,7 @@ setInterval(loadStatus, 10000);
     color: var(--amber);
     padding: 1px 6px;
     border-radius: 2px;
-    font-size: 13px;
+    font-size: 16px;
 }
 .doc-panel pre {
     background: var(--void);
