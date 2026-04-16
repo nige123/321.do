@@ -1668,121 +1668,227 @@ body::after {
     text-decoration: none;
 }
 
+/* Add Service page */
+
+.add-page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
 .add-page-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    grid-template-columns: 420px 1fr;
+    gap: 32px;
     align-items: start;
 }
 
-.add-section-title {
-    font-family: var(--display);
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 2px;
+.add-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 28px;
+}
+
+.add-field {
+    margin-bottom: 20px;
+}
+
+.add-label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: var(--text-1);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.add-label-sm {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-2);
+    margin-bottom: 4px;
+}
+
+.add-input {
+    font-family: var(--mono);
+    font-size: 15px;
+    padding: 8px 12px;
+    background: var(--void);
+    border: 1px solid var(--border);
+    color: var(--phosphor-mid);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+}
+
+.add-input:focus {
+    border-color: var(--phosphor-dim);
     color: var(--phosphor);
-    text-shadow: 0 0 8px var(--phosphor-glow);
-    margin: 0 0 16px;
 }
 
-.add-target-title {
-    font-family: var(--display);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
+.add-input::placeholder {
     color: var(--text-2);
-    margin: 16px 0 8px;
+    opacity: 0.5;
 }
 
-.add-target-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
-.add-target-row .config-row {
-    grid-template-columns: 60px 1fr;
-}
-
-.add-field-hint {
+.add-hint {
     font-size: 11px;
     color: var(--text-2);
-    margin: -4px 0 12px 128px;
+    margin-top: 5px;
+    line-height: 1.5;
     opacity: 0.7;
 }
 
-.add-field-hint code {
+.add-hint code {
     background: var(--panel-2);
     padding: 1px 4px;
     font-size: 11px;
+}
+
+.add-divider {
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+}
+
+.add-target-section {
+    margin-bottom: 20px;
+}
+
+.add-target-label {
+    font-family: var(--display);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-2);
+    margin-bottom: 10px;
+}
+
+.add-target-fields {
+    display: grid;
+    grid-template-columns: 1fr 120px;
+    gap: 12px;
+}
+
+.add-create-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--phosphor-dim);
+    border: 1px solid var(--phosphor-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-create-btn:hover {
+    background: var(--phosphor-mid);
+    border-color: var(--phosphor-mid);
+}
+
+.add-create-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
 }
 
 .add-error {
     margin-top: 12px;
     padding: 8px 12px;
-    background: rgba(204, 51, 51, 0.1);
-    border: 1px solid #c33;
-    color: #c33;
+    background: rgba(204, 51, 51, 0.08);
+    border: 1px solid rgba(204, 51, 51, 0.3);
+    color: #f66;
     font-size: 12px;
+    font-family: var(--mono);
+}
+
+/* Guide column */
+
+.add-guide-block {
+    margin-bottom: 16px;
+}
+
+.add-guide-title {
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--phosphor-dim);
+    margin-bottom: 14px;
 }
 
 .add-example {
-    background: var(--panel-2);
+    background: var(--void);
     border: 1px solid var(--border);
     padding: 12px 16px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     font-family: var(--mono);
     font-size: 13px;
 }
 
-.add-example-row {
+.add-ex-row {
     display: flex;
     gap: 12px;
     padding: 2px 0;
 }
 
-.add-ex-label {
+.add-ex-k {
     color: var(--text-2);
-    min-width: 60px;
+    min-width: 55px;
     font-size: 10px;
     letter-spacing: 1px;
     padding-top: 2px;
 }
 
-.add-ex-value {
+.add-ex-v {
     color: var(--phosphor-mid);
 }
 
-.add-guide-text {
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--fg);
-    opacity: 0.8;
+.add-prose {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-1);
 }
 
-.add-guide-text code, .add-tips code {
+.add-prose code, .add-tips code, .add-steps code {
     background: var(--panel-2);
     padding: 1px 4px;
-    font-size: 12px;
+    font-size: 11px;
+}
+
+.add-prose strong, .add-tips strong, .add-steps strong {
+    color: var(--text-0);
+    font-weight: 500;
 }
 
 .add-steps {
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--fg);
-    opacity: 0.8;
-    padding-left: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-1);
+    padding-left: 18px;
+    margin: 0;
 }
 
 .add-steps li {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .add-code {
-    background: var(--panel-2);
+    background: var(--void);
     border: 1px solid var(--border);
     padding: 8px 12px;
-    margin: 6px 0;
+    margin: 6px 0 0;
     font-family: var(--mono);
     font-size: 12px;
     color: var(--phosphor-mid);
@@ -1790,11 +1896,12 @@ body::after {
 }
 
 .add-tips {
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--fg);
-    opacity: 0.8;
-    padding-left: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-1);
+    padding-left: 18px;
+    margin: 0;
 }
 
 .add-tips li {
@@ -1901,16 +2008,25 @@ body::after {
 
 /* ═══ RESPONSIVE ═══ */
 
+@media (max-width: 1024px) {
+    .add-page-grid { grid-template-columns: 1fr; max-width: 600px; }
+}
+
 @media (max-width: 768px) {
     .detail-grid { grid-template-columns: 1fr; }
     .detail-sidebar { position: static; }
     .analysis-grid { grid-template-columns: 1fr; }
-    .add-page-grid { grid-template-columns: 1fr; }
-    .add-target-row { grid-template-columns: 1fr; }
-    .add-field-hint { margin-left: 0; }
     .svc-grid { grid-template-columns: 1fr; }
     .mission-title { display: none; }
     .mission-clock { font-size: 13px; }
+    .add-panel { padding: 20px; }
+    .add-target-fields { grid-template-columns: 1fr 100px; }
+}
+
+@media (max-width: 480px) {
+    .add-target-fields { grid-template-columns: 1fr; }
+    .add-panel { padding: 16px; }
+    .add-input { font-size: 14px; }
 }
 
 </style>
@@ -2980,106 +3096,114 @@ setInterval(loadStatus, 10000);
     <div class="page-title"><a href="/" class="back-link">&larr;</a> Add Service</div>
 </div>
 
-<div class="add-page-grid">
-    <div class="add-page-form">
-        <div class="detail-info">
-            <h2 class="add-section-title">Register a new service</h2>
+<div class="add-page">
+    <div class="add-page-grid">
 
-            <div class="config-row">
-                <span class="config-label">NAME</span>
-                <input class="config-input" id="add-name" placeholder="pizza.web" autocomplete="off">
-            </div>
-            <div class="add-field-hint">Format: <code>group.service</code> &mdash; e.g. pizza.web, blog.api</div>
-
-            <div class="config-row">
-                <span class="config-label">REPO</span>
-                <input class="config-input" id="add-repo" placeholder="/home/s3/web.pizza.do" autocomplete="off">
-            </div>
-            <div class="add-field-hint">Where the code lives (or will live after clone)</div>
-
-            <div class="config-row">
-                <span class="config-label">BRANCH</span>
-                <input class="config-input" id="add-branch" value="master" autocomplete="off">
-            </div>
-
-            <h3 class="add-target-title">Dev target</h3>
-            <div class="add-target-row">
-                <div class="config-row">
-                    <span class="config-label">HOST</span>
-                    <input class="config-input" id="add-dev-host" placeholder="pizza.do.dev" autocomplete="off">
+        <!-- ── Form ── -->
+        <div class="add-page-form">
+            <div class="add-panel">
+                <div class="add-field">
+                    <label class="add-label" for="add-name">Service name</label>
+                    <input class="add-input" id="add-name" placeholder="pizza.web" autocomplete="off" spellcheck="false">
+                    <div class="add-hint"><code>group.service</code> format &mdash; the group drives ubic, nginx, and repo naming</div>
                 </div>
-                <div class="config-row">
-                    <span class="config-label">PORT</span>
-                    <input class="config-input" id="add-dev-port" placeholder="9500" autocomplete="off">
-                </div>
-            </div>
 
-            <h3 class="add-target-title">Live target</h3>
-            <div class="add-target-row">
-                <div class="config-row">
-                    <span class="config-label">HOST</span>
-                    <input class="config-input" id="add-live-host" placeholder="pizza.do" autocomplete="off">
+                <div class="add-field">
+                    <label class="add-label" for="add-repo">Repo path</label>
+                    <input class="add-input" id="add-repo" placeholder="/home/s3/web.pizza.do" autocomplete="off" spellcheck="false">
+                    <div class="add-hint">Where the code lives on disk (or will live after <code>321 install</code>)</div>
                 </div>
-                <div class="config-row">
-                    <span class="config-label">PORT</span>
-                    <input class="config-input" id="add-live-port" placeholder="9500" autocomplete="off">
-                </div>
-            </div>
 
-            <div style="padding-top:16px">
-                <button class="btn btn-deploy" id="create-btn" onclick="createSubsystem()" style="width:100%;justify-content:center">
-                    CREATE
+                <div class="add-field">
+                    <label class="add-label" for="add-branch">Branch</label>
+                    <input class="add-input" id="add-branch" value="master" autocomplete="off" spellcheck="false">
+                </div>
+
+                <div class="add-divider"></div>
+
+                <div class="add-target-section">
+                    <div class="add-target-label">Dev</div>
+                    <div class="add-target-fields">
+                        <div class="add-field">
+                            <label class="add-label-sm" for="add-dev-host">Host</label>
+                            <input class="add-input" id="add-dev-host" placeholder="pizza.do.dev" autocomplete="off" spellcheck="false">
+                        </div>
+                        <div class="add-field">
+                            <label class="add-label-sm" for="add-dev-port">Port</label>
+                            <input class="add-input" id="add-dev-port" placeholder="9500" autocomplete="off" inputmode="numeric">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="add-target-section">
+                    <div class="add-target-label">Live</div>
+                    <div class="add-target-fields">
+                        <div class="add-field">
+                            <label class="add-label-sm" for="add-live-host">Host</label>
+                            <input class="add-input" id="add-live-host" placeholder="pizza.do" autocomplete="off" spellcheck="false">
+                        </div>
+                        <div class="add-field">
+                            <label class="add-label-sm" for="add-live-port">Port</label>
+                            <input class="add-input" id="add-live-port" placeholder="9500" autocomplete="off" inputmode="numeric">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="add-create-btn" id="create-btn" onclick="createSubsystem()">
+                    Register Service
                 </button>
+                <div id="create-error" class="add-error" style="display:none"></div>
             </div>
-            <div id="create-error" class="add-error" style="display:none"></div>
         </div>
-    </div>
 
-    <div class="add-page-guide">
-        <div class="detail-info">
-            <h2 class="add-section-title">Example</h2>
-            <div class="add-example">
-                <div class="add-example-row"><span class="add-ex-label">NAME</span> <span class="add-ex-value">pizza.web</span></div>
-                <div class="add-example-row"><span class="add-ex-label">REPO</span> <span class="add-ex-value">/home/s3/web.pizza.do</span></div>
-                <div class="add-example-row"><span class="add-ex-label">BRANCH</span> <span class="add-ex-value">master</span></div>
-                <div class="add-example-row"><span class="add-ex-label">DEV</span> <span class="add-ex-value">pizza.do.dev :9500</span></div>
-                <div class="add-example-row"><span class="add-ex-label">LIVE</span> <span class="add-ex-value">pizza.do :9500</span></div>
+        <!-- ── Guide ── -->
+        <div class="add-page-guide">
+
+            <div class="add-panel add-guide-block">
+                <div class="add-guide-title">Example</div>
+                <div class="add-example">
+                    <div class="add-ex-row"><span class="add-ex-k">NAME</span><span class="add-ex-v">pizza.web</span></div>
+                    <div class="add-ex-row"><span class="add-ex-k">REPO</span><span class="add-ex-v">/home/s3/web.pizza.do</span></div>
+                    <div class="add-ex-row"><span class="add-ex-k">BRANCH</span><span class="add-ex-v">master</span></div>
+                    <div class="add-ex-row"><span class="add-ex-k">DEV</span><span class="add-ex-v">pizza.do.dev :9500</span></div>
+                    <div class="add-ex-row"><span class="add-ex-k">LIVE</span><span class="add-ex-v">pizza.do :9500</span></div>
+                </div>
+                <p class="add-prose">
+                    Type a name and the other fields auto-fill. The <strong>group</strong> (<code>pizza</code>)
+                    sets the repo directory, ubic service tree, and nginx config.
+                    Dev hosts use a <code>.dev</code> suffix with mkcert for local SSL.
+                </p>
             </div>
-            <p class="add-guide-text">
-                The <strong>name</strong> is <code>group.service</code> &mdash; the group drives the ubic service tree, the repo directory name, and the nginx config.
-                The <strong>repo</strong> is where the code lives on disk. Convention is <code>/home/s3/web.&lt;group&gt;.do</code> for web services.
-                <strong>Dev host</strong> gets a <code>.dev</code> suffix; mkcert handles local SSL. Pick an <strong>unused port</strong> &mdash; check the dashboard for what&rsquo;s taken.
-            </p>
 
-            <h2 class="add-section-title" style="margin-top:24px">What&rsquo;s next?</h2>
-            <ol class="add-steps">
-                <li>
-                    <strong>Prepare the repo</strong> &mdash; make sure it exists and contains a <code>.321.yml</code> manifest at the root. Minimum:
-                    <pre class="add-code">name: pizza.web
+            <div class="add-panel add-guide-block">
+                <div class="add-guide-title">After registering</div>
+                <ol class="add-steps">
+                    <li>
+                        <strong>Add a manifest</strong> to your repo &mdash; create <code>.321.yml</code> at the root:
+                        <pre class="add-code">name: pizza.web
 entry: bin/app.pl
 runner: hypnotoad</pre>
-                </li>
-                <li>
-                    <strong>Install the service</strong> &mdash; from the 321.do machine:
-                    <pre class="add-code">321 install pizza.web</pre>
-                    This clones the repo (if needed), installs Perl deps, sets up ubic + nginx + SSL, and starts the service.
-                </li>
-                <li>
-                    <strong>Set secrets</strong> &mdash; if the manifest declares <code>env_required</code>, set them from the service detail page before deploying.
-                </li>
-                <li>
-                    <strong>Check the dashboard</strong> &mdash; the service should appear with a green status LED.
-                </li>
-            </ol>
+                    </li>
+                    <li>
+                        <strong>Install</strong> from the terminal:
+                        <pre class="add-code">321 install pizza.web</pre>
+                        Clones the repo, installs deps, sets up ubic + nginx + SSL, starts the service.
+                    </li>
+                    <li><strong>Set secrets</strong> if the manifest declares <code>env_required</code> &mdash; use the secrets panel on the service page.</li>
+                    <li><strong>Check the dashboard</strong> &mdash; green LED means it&rsquo;s running.</li>
+                </ol>
+            </div>
 
-            <h2 class="add-section-title" style="margin-top:24px">Tips</h2>
-            <ul class="add-tips">
-                <li><strong>Ports</strong> &mdash; check the dashboard for ports already in use before picking one.</li>
-                <li><strong>Naming</strong> &mdash; keep the group name short and lowercase. It&rsquo;s reused everywhere: ubic tree, repo dir, nginx config.</li>
-                <li><strong>Dev parity</strong> &mdash; dev targets get the same nginx + SSL setup as live via mkcert. Run <code>321 hosts</code> after install to update <code>/etc/hosts</code>.</li>
-                <li><strong>Branch</strong> &mdash; most services use <code>master</code>. Use <code>main</code> if that&rsquo;s what the repo uses.</li>
-                <li><strong>No bin/runner field?</strong> &mdash; those come from the <code>.321.yml</code> manifest in the service repo, not from deploy config.</li>
-            </ul>
+            <div class="add-panel add-guide-block">
+                <div class="add-guide-title">Tips</div>
+                <ul class="add-tips">
+                    <li><strong>Ports</strong> &mdash; check the dashboard to see what&rsquo;s already in use.</li>
+                    <li><strong>Naming</strong> &mdash; keep the group short and lowercase. It appears everywhere.</li>
+                    <li><strong>Dev parity</strong> &mdash; dev gets the same nginx + SSL as live. Run <code>321 hosts</code> after install.</li>
+                    <li><strong>No bin/runner field?</strong> &mdash; those come from <code>.321.yml</code> in the service repo.</li>
+                </ul>
+            </div>
+
         </div>
     </div>
 </div>
