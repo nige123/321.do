@@ -94,7 +94,7 @@ Each renders per-step output in the same collapsible panel as DEPLOY; failed ste
 
 ### Migration convention
 
-Drop a `bin/migrate` executable in the service repo. 321 invokes it with `PERL5LIB=<repo>/local/lib/perl5` and `PATH=<repo>/local/bin:$PATH` so the script can `use` your repo-local modules. Non-zero exit aborts the deploy before restart; the full stdout+stderr appears in the deploy log panel.
+Drop a `bin/migrate` executable in the service repo. 321 invokes it with `PERL5LIB=<repo>/local/lib/perl5` and `PATH=<repo>/local/bin:$PATH` so the script can `use` your repo-local modules. Non-zero exit aborts the deploy or update before restart (for standalone MIGRATE, it returns the error directly). The full stdout+stderr appears in the deploy log panel.
 
 Pick whatever migration tool fits — `DBIx::Migration`, `App::Sqitch`, plain `psql -f migrations/<ts>.sql`, a `make migrate` shim. 321 only cares about the exit code.
 
