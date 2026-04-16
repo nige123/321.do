@@ -50,7 +50,7 @@ sub deploy ($self, $name, %opts) {
 
     my $s = $self->_step_apt_deps($svc);
     push @steps, $s;
-    my $apt_ok = ref $s->{success} ? ${$s->{success}} : $s->{success};
+    my $apt_ok = $self->_ok($s);
     return $self->_deploy_result($name, 'error', 'System packages missing', \@steps)
         unless $apt_ok;
 
@@ -58,18 +58,18 @@ sub deploy ($self, $name, %opts) {
         $s = $self->_step_git_pull($svc);
         push @steps, $s;
         return $self->_deploy_result($name, 'error', 'Git pull failed', \@steps)
-            unless $s->{success};
+            unless $self->_ok($s);
     }
 
     $s = $self->_step_cpanm($svc);
     push @steps, $s;
-    $self->log->warn("cpanm failed for $name: $s->{output}") unless $s->{success};
+    $self->log->warn("cpanm failed for $name: $s->{output}") unless $self->_ok($s);
 
     if (-x "$svc->{repo}/bin/migrate") {
         $s = $self->_step_migrate($svc);
         push @steps, $s;
         return $self->_deploy_result($name, 'error', 'Migration failed', \@steps)
-            unless $s->{success};
+            unless $self->_ok($s);
     }
 
     if ($self->ubic_mgr) {
@@ -80,7 +80,7 @@ sub deploy ($self, $name, %opts) {
     $s = $self->_step_ubic_restart($name);
     push @steps, $s;
     return $self->_deploy_result($name, 'error', 'Ubic restart failed', \@steps)
-        unless $s->{success};
+        unless $self->_ok($s);
 
     sleep 2;
     $s = $self->_step_port_check($svc);
@@ -89,7 +89,7 @@ sub deploy ($self, $name, %opts) {
     $self->_log_deploy($name, \@steps);
 
     my $tag = $skip_git ? ' (dev)' : '';
-    my $port_ok = ref $s->{success} ? ${$s->{success}} : $s->{success};
+    my $port_ok = $self->_ok($s);
     my $final_status = $port_ok ? 'success' : 'error';
     my $final_msg = $port_ok
         ? "Deployed $name$tag successfully"
@@ -106,24 +106,29 @@ sub _step_git_pull ($self, $svc) {
     my $branch = $svc->{branch} // 'master';
     my ($ok, $out) = $self->_run_in_dir($svc->{repo},
         "git fetch origin && git reset --hard origin/$branch");
-    return { step => 'git_pull', success => $ok, output => $out };
+    return { step => 'git_pull', success => $ok ? \1 : \0, output => $out };
 }
 
 sub _step_cpanm ($self, $svc) {
     my ($ok, $out) = $self->_run_in_dir($svc->{repo}, $self->_cpanm_cmd($svc->{perlbrew}));
-    return { step => 'cpanm', success => $ok, output => $out };
+    return { step => 'cpanm', success => $ok ? \1 : \0, output => $out };
 }
 
 sub _step_ubic_restart ($self, $name) {
     my ($ok, $out) = $self->_run_cmd("ubic restart $name");
-    return { step => 'ubic_restart', success => $ok, output => $out };
+    return { step => 'ubic_restart', success => $ok ? \1 : \0, output => $out };
 }
 
 sub _step_migrate ($self, $svc) {
     my $repo = $svc->{repo};
     my $env_prefix = "PERL5LIB=$repo/local/lib/perl5 PATH=$repo/local/bin:\$PATH";
     my ($ok, $out) = $self->_run_in_dir($repo, "$env_prefix ./bin/migrate");
-    return { step => 'migrate', success => $ok, output => $out };
+    return { step => 'migrate', success => $ok ? \1 : \0, output => $out };
+}
+
+# Every _step_* returns { success => \1 | \0 }. Callers deref via this helper.
+sub _ok ($self, $step) {
+    return ref $step->{success} ? ${ $step->{success} } : $step->{success};
 }
 
 sub _step_port_check ($self, $svc) {
@@ -148,13 +153,13 @@ sub restart ($self, $name) {
     my $s = $self->_step_ubic_restart($name);
     push @steps, $s;
     return $self->_deploy_result($name, 'error', 'Ubic restart failed', \@steps)
-        unless $s->{success};
+        unless $self->_ok($s);
 
     sleep 2;
     $s = $self->_step_port_check($svc);
     push @steps, $s;
 
-    my $port_ok = ref $s->{success} ? ${$s->{success}} : $s->{success};
+    my $port_ok = $self->_ok($s);
     return $self->_deploy_result(
         $name,
         $port_ok ? 'success' : 'error',
@@ -172,7 +177,7 @@ sub migrate ($self, $name) {
     }
 
     my $s = $self->_step_migrate($svc);
-    my $ok = $s->{success};
+    my $ok = $self->_ok($s);
     return $self->_deploy_result(
         $name,
         $ok ? 'success' : 'error',
@@ -190,22 +195,22 @@ sub update ($self, $name) {
     my $s = $self->_step_apt_deps($svc);
     push @steps, $s;
     return $self->_deploy_result($name, 'error', 'System packages missing', \@steps)
-        unless ref $s->{success} ? ${$s->{success}} : $s->{success};
+        unless $self->_ok($s);
 
     $s = $self->_step_git_pull($svc);
     push @steps, $s;
     return $self->_deploy_result($name, 'error', 'Git pull failed', \@steps)
-        unless $s->{success};
+        unless $self->_ok($s);
 
     $s = $self->_step_cpanm($svc);
     push @steps, $s;
-    $self->log->warn("cpanm failed for $name: $s->{output}") unless $s->{success};
+    $self->log->warn("cpanm failed for $name: $s->{output}") unless $self->_ok($s);
 
     if (-x "$svc->{repo}/bin/migrate") {
         $s = $self->_step_migrate($svc);
         push @steps, $s;
         return $self->_deploy_result($name, 'error', 'Migration failed', \@steps)
-            unless $s->{success};
+            unless $self->_ok($s);
     }
 
     return $self->_deploy_result($name, 'success', "Updated $name (no restart)", \@steps);
@@ -328,7 +333,7 @@ sub _log_deploy ($self, $name, $steps) {
     push @lines, "Deploy: $name at $timestamp";
     push @lines, "=" x 40;
     for my $step (@$steps) {
-        my $ok = ref $step->{success} ? ${$step->{success}} : $step->{success};
+        my $ok = $self->_ok($step);
         push @lines, sprintf("[%s] %s", $ok ? 'OK' : 'FAIL', $step->{step});
         push @lines, "  $step->{output}" if $step->{output};
     }

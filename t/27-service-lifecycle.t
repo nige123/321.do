@@ -99,7 +99,7 @@ subtest '_step_migrate: failure propagates non-zero exit' => sub {
     my $svc = $svc_mgr->config->service('demo.web');
     my $s = $svc_mgr->_step_migrate($svc);
 
-    ok !$s->{success},         'non-zero exit → success false';
+    ok !${$s->{success}},      'non-zero exit → success false';
     like $s->{output}, qr/boom/, 'stderr captured in output';
 };
 
