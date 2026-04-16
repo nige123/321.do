@@ -1,7 +1,5 @@
-bin: bin/321.pl
 branch: master
 name: 321.web
-perlbrew: perl-5.42.0
 repo: /home/s3/web.321.do
 targets:
     dev:
@@ -34,14 +32,14 @@ sops:
         - recipient: age1aym3w56q3wx0u8p6dpxkc2skxz838ut78cjznyjncnz3zz8a35kqzrp3q7
           enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
-            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBDbGlrYUQvemhrM1lucDBo
-            Tklxb3hpb0JhWmo4cnU1UFFQVGpDc2ZDcVNzCnIvaTMxUG5BaCtYcWR2OEpURHkr
-            RHhqemIyMzVidGZDeEluVnZ6LzJoTTgKLS0tIEVydFZ3VytUTCtHVStweTBNbndq
-            OGxkOVFoOFh0RFYwN05IYmpGRlBsVUUKtFv5hisb+EgYE6+SjFiUOgDIfxCwxL+G
-            Yzz5jpsw9yeTxrc/qZXXGcctdgFXI1kWJ2iSc3C/039O7MceasR8cw==
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBuYVNyUzNLU0RGMWdLdGlJ
+            Y2d4VTZ5Z0UxdENZYXBKT2gzbE54T3JoS1drCm5aelR0bGVnQnRHRGt2aS9tWWls
+            aTd5MUhaZ0NTWTFabEJTMEFLZjIzc3cKLS0tIHVUUFFVVXFWdnNuUjZPNVFSc1Bo
+            UnFIVmJ1UFlINXAvUWlBZHYyOElQRm8KM/MF8gpRFtjfi+3MYcn8a+b3KEakIrIH
+            ILVQreAvuBaNTjjnqWY2uOUzHIuibTsQ1CsuGosstGiBvsnA0oiNfQ==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-04-16T06:40:27Z"
-    mac: ENC[AES256_GCM,data:8BABHwgxiZyafMWK5da3IfYBo6gzj9Haa2iOfCyRSQqWoLC2AOcquszN6kNXf/y+UrOSElk0w8xF6of2x2i5qW2Vhmgpz9IdamigLWAOJLW83/ETA+TT0tdpXN9TmhemySnDPro5PF36N7ekDMGJNQqd9VJ0zX606dmVz86Pfew=,iv:qPFBxEK2WTZGcKeg0L3sy2wYdRFjulK30UzOpUqJ0FE=,tag:Fdz4ggt0HErgdmchXQhwFQ==,type:str]
+    lastmodified: "2026-04-16T11:37:40Z"
+    mac: ENC[AES256_GCM,data:/9mHF0yBvj6mSWOaInRV6SixKBNJ3N2k9jZ12lTO02BGJsUs1jYYLvhbaZksnwoZx4BDvDTanuIeByBW8SUXPxCqxHFOLKYs7qULo9Q6ZFoPY3WoQIs0TKlF2TgVxUanJR/SYGMLReNDMLLfGS7bQpNGv9O7JNSCEIS4J6x//GI=,iv:jXiFnxY/YR3yKAU2jHxZBxBz+bA5nI8hHnVzkl1+q1c=,tag:zoCN1d9v/UXl+MyzG51t6g==,type:str]
     pgp: []
     encrypted_regex: ^(env)$
     version: 3.9.4
