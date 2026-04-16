@@ -113,6 +113,28 @@ Dev mirrors production byte-for-byte — same nginx templates, same `listen 443 
 
 Prod never needs mkcert; dev never needs certbot. Both still use the same `Deploy::Nginx` templates.
 
+## Service Repo Contract
+
+Every service repo installed by 321 must ship a `.321.yml` at the repo root. It declares code-side facts — things that belong with the application, not in the deploy repo.
+
+```yaml
+name: love.web              # <group>.<name>
+entry: bin/love.pl
+runner: hypnotoad           # hypnotoad | morbo | script
+perl: perl-5.42.1           # optional; perlbrew version
+health: /health             # optional; post-deploy probe path
+env_required:               # keys the app cannot start without
+  DATABASE_URL: "Postgres DSN"
+env_optional:               # keys with sensible defaults or only-sometimes-needed
+  LOG_LEVEL:
+    default: info
+    desc: "debug | info | warn"
+```
+
+The deploy repo (`services/<name>.yml`) only owns deploy-side facts: repo URL, branch, per-target `host`/`port`/`ssl`/`env`, `apt_deps`, and any operator overrides. When a deploy YAML sets a field that also exists in the manifest (e.g. `bin:`), the deploy-side value wins (operator override).
+
+The 321 dashboard compares `env_required` against `secrets/<name>.env` and refuses to deploy or start a service with any missing required key. Secrets are managed via the dashboard UI or the `/service/:name/secrets` API.
+
 ## Development
 
 ```bash
