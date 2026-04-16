@@ -47,12 +47,10 @@ Open the dashboard. Green light = running. Click **VISIT** to open the site.
 
 Four buttons on the service detail page:
 
-| Button | What it does | When to use |
-|--------|-------------|-------------|
-| **DEPLOY** | Pull code, deps, migrate, restart | Regular deployments |
-| **UPDATE** | Pull code, deps, migrate (no restart) | Check everything before bouncing |
-| **MIGRATE** | Run `bin/migrate` only | Re-run a migration |
-| **RESTART** | Restart + verify port | After config/env changes |
+- **DEPLOY** — pull code, deps, migrate, restart. Regular deployments.
+- **UPDATE** — pull code, deps, migrate (no restart). Check everything before bouncing.
+- **MIGRATE** — run `bin/migrate` only. Re-run a migration.
+- **RESTART** — restart + verify port. After config/env changes.
 
 All four show per-step output. Failed steps expand automatically.
 
@@ -90,15 +88,13 @@ Managed from the service detail page or the API:
 
 ## If something goes wrong
 
-| Symptom | Fix |
-|---------|-----|
-| Deploy failed at `apt_deps` | Run the `sudo apt install ...` shown in the error |
-| Deploy failed at `cpanm` | Usually a missing system lib — add to `apt_deps` in your service YAML |
-| Deploy failed at `git_pull` | Check `branch:` matches the actual branch (main vs master) |
-| Deploy blocked on secrets | Set the missing keys in the SECRETS panel |
-| Service won't start | Check the **stderr** tab |
-| Port already in use | `sudo fuser -k <port>/tcp` |
-| Browser cert warning | See *Browser setup* below |
+- **Deploy failed at `apt_deps`** — run the `sudo apt install ...` shown in the error
+- **Deploy failed at `cpanm`** — usually a missing system lib. Add it to `apt_deps` in your service YAML
+- **Deploy failed at `git_pull`** — check `branch:` matches the actual branch (main vs master)
+- **Deploy blocked on secrets** — set the missing keys in the SECRETS panel
+- **Service won't start** — check the **stderr** tab
+- **Port already in use** — `sudo fuser -k <port>/tcp`
+- **Browser cert warning** — see *Browser setup* below
 
 ---
 
