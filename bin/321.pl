@@ -141,6 +141,20 @@ get '/health' => sub ($c) {
 # List all services
 get '/services' => sub ($c) {
     my $services = $service_mgr->all_status;
+    for my $svc_status (@$services) {
+        my $svc = $config->service($svc_status->{name});
+        next unless $svc;
+        my $diff = $secrets_mgr->diff($svc_status->{name}, {
+            required => $svc->{env_required} // {},
+            optional => $svc->{env_optional} // {},
+        });
+        my $req_count = scalar keys %{ $svc->{env_required} // {} };
+        $svc_status->{secrets} = {
+            required => $req_count,
+            present  => $req_count - scalar @{ $diff->{missing} },
+            missing  => $diff->{missing},
+        };
+    }
     $c->json_response(success => scalar(@$services) . ' services registered', $services);
 };
 
@@ -1197,6 +1211,10 @@ body::after {
 .deploy-output .step-fail { color: var(--red); text-shadow: 0 0 8px var(--red-glow); }
 .deploy-output .step-label { color: var(--text-2); }
 
+.badge { display:inline-block; padding:2px 6px; border-radius:3px; font-size:11px; margin-left:6px; vertical-align:middle; }
+.badge-ok   { background:var(--accent); color:var(--bg); }
+.badge-warn { background:#c33; color:#fff; }
+
 .deploy-step { margin: 4px 0; }
 .deploy-step > summary {
     cursor: pointer;
@@ -1995,7 +2013,7 @@ async function loadServices() {
         const deployLabel = isDev ? 'DEPLOY DEV' : 'DEPLOY';
         card.innerHTML = `
             <div class="svc-header">
-                <div class="svc-name"><a href="/ui/service/${svc.name}">${svc.name}</a>${modeBadge}</div>
+                <div class="svc-name"><a href="/ui/service/${svc.name}">${svc.name}</a>${modeBadge}${(() => { const sec = svc.secrets; if (!sec || sec.required === 0) return ''; const ok = sec.present === sec.required; return '<span class="badge ' + (ok ? 'badge-ok' : 'badge-warn') + '">secrets: ' + sec.present + '/' + sec.required + '</span>'; })()}</div>
                 <div class="status-led ${running ? 'on' : 'off'}"></div>
             </div>
             <dl class="svc-meta">
