@@ -733,11 +733,23 @@ body::after {
 
 /* ═══ CARD INTERNALS ═══ */
 
-.svc-header {
+.svc-toprow {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.svc-toprow-spacer {
+    flex: 1;
+}
+
+.svc-favicon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+    opacity: 0.8;
 }
 
 .svc-name {
@@ -745,18 +757,7 @@ body::after {
     font-size: 19px;
     font-weight: 600;
     letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.svc-favicon {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    flex-shrink: 0;
-    opacity: 0.85;
+    margin-bottom: 14px;
 }
 
 .svc-name a {
@@ -2099,11 +2100,16 @@ async function loadServices() {
         const deployLabel = isDev ? 'DEPLOY DEV' : 'DEPLOY';
         const faviconUrl = svc.favicon || (svc.host && svc.host !== 'localhost' ? 'https://' + svc.host + '/favicon.ico' : '');
         const faviconImg = faviconUrl ? '<img class="svc-favicon" src="' + esc(faviconUrl) + '" alt="" onerror="this.style.display=\'none\'">' : '';
+        const secretsBadge = (() => { const sec = svc.secrets; if (!sec || sec.required === 0) return ''; const ok = sec.present === sec.required; return '<span class="badge ' + (ok ? 'badge-ok' : 'badge-warn') + '">secrets: ' + sec.present + '/' + sec.required + '</span>'; })();
         card.innerHTML = `
-            <div class="svc-header">
-                <div class="svc-name">${faviconImg}<a href="/ui/service/${svc.name}">${svc.name}</a>${modeBadge}${(() => { const sec = svc.secrets; if (!sec || sec.required === 0) return ''; const ok = sec.present === sec.required; return '<span class="badge ' + (ok ? 'badge-ok' : 'badge-warn') + '">secrets: ' + sec.present + '/' + sec.required + '</span>'; })()}</div>
+            <div class="svc-toprow">
+                ${modeBadge}
+                ${faviconImg}
+                <div class="svc-toprow-spacer"></div>
+                ${secretsBadge}
                 <div class="status-led ${running ? 'on' : 'off'}"></div>
             </div>
+            <div class="svc-name"><a href="/ui/service/${svc.name}">${svc.name}</a></div>
             <dl class="svc-meta">
                 <dt>PORT</dt><dd>${svc.port || '\u2014'}</dd>
                 <dt>PID</dt><dd>${svc.pid || '\u2014'}</dd>
