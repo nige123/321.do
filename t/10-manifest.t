@@ -8,11 +8,11 @@ my $dir = tempdir(CLEANUP => 1);
 
 subtest 'missing file returns undef' => sub {
     my $m = Deploy::Manifest->load($dir);
-    ok !$m, 'returns undef when .321.yml absent';
+    ok !$m, 'returns undef when 321.yml absent';
 };
 
 subtest 'minimal manifest' => sub {
-    path($dir, '.321.yml')->spew_utf8(<<'YAML');
+    path($dir, '321.yml')->spew_utf8(<<'YAML');
 name: foo.web
 entry: bin/app.pl
 runner: hypnotoad
@@ -26,7 +26,7 @@ YAML
 };
 
 subtest 'full manifest with env' => sub {
-    path($dir, '.321.yml')->spew_utf8(<<'YAML');
+    path($dir, '321.yml')->spew_utf8(<<'YAML');
 name: love.web
 entry: bin/love.pl
 runner: hypnotoad
@@ -46,13 +46,13 @@ YAML
 };
 
 subtest 'invalid: missing required field' => sub {
-    path($dir, '.321.yml')->spew_utf8("name: bad\n");
+    path($dir, '321.yml')->spew_utf8("name: bad\n");
     my $err = eval { Deploy::Manifest->load($dir); 0 } || $@;
     like $err, qr/missing 'entry'/, 'rejects manifest without entry';
 };
 
 subtest 'invalid: unknown runner' => sub {
-    path($dir, '.321.yml')->spew_utf8(<<'YAML');
+    path($dir, '321.yml')->spew_utf8(<<'YAML');
 name: bad
 entry: bin/x.pl
 runner: supervisord
@@ -62,7 +62,7 @@ YAML
 };
 
 subtest 'invalid: bad env key name' => sub {
-    path($dir, '.321.yml')->spew_utf8(<<'YAML');
+    path($dir, '321.yml')->spew_utf8(<<'YAML');
 name: bad
 entry: bin/x.pl
 runner: hypnotoad

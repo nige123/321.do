@@ -9,7 +9,7 @@ path($home, 'services')->mkpath;
 path($home, 'secrets')->mkpath;
 
 my $repo = tempdir(CLEANUP => 1);
-path($repo, '.321.yml')->spew_utf8(<<'YAML');
+path($repo, '321.yml')->spew_utf8(<<'YAML');
 name: demo.web
 entry: bin/demo.pl
 runner: hypnotoad

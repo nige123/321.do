@@ -8,7 +8,7 @@ my %VALID_RUNNER = map { $_ => 1 } qw(hypnotoad morbo script);
 my $ENV_KEY_RE   = qr/^[A-Z_][A-Z0-9_]*$/;
 
 sub load ($class, $repo_dir) {
-    my $file = path($repo_dir, '.321.yml');
+    my $file = path($repo_dir, '321.yml');
     return undef unless $file->exists;
 
     my $raw = LoadFile($file->stringify);

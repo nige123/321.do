@@ -12,7 +12,7 @@ path($home, 'secrets')->mkpath;
 my $repo = tempdir(CLEANUP => 1);
 system("cd $repo && git init -q && git config user.email t\@t && git config user.name t && git commit --allow-empty -m init -q");
 path($repo, 'cpanfile')->spew_utf8("requires 'perl', '5.010';\n");
-path($repo, '.321.yml')->spew_utf8(
+path($repo, '321.yml')->spew_utf8(
     "name: demo.web\nentry: bin/x.pl\nrunner: hypnotoad\n" .
     "env_required:\n  API_KEY: required\n"
 );

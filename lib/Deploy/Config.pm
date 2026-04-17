@@ -121,9 +121,11 @@ sub _resolve ($self, $name, $raw) {
         apt_deps     => $raw->{apt_deps} // [],
         env_required => $manifest ? $manifest->{env_required} : {},
         env_optional => $manifest ? $manifest->{env_optional} : {},
-        ($target->{docs}  ? (docs  => $target->{docs})  : ()),
-        ($target->{admin} ? (admin => $target->{admin}) : ()),
-        ($perlbrew        ? (perlbrew => $perlbrew)      : ()),
+        ($target->{ssh}     ? (ssh     => $target->{ssh})     : ()),
+        ($target->{ssh_key} ? (ssh_key => $target->{ssh_key}) : ()),
+        ($target->{docs}    ? (docs    => $target->{docs})    : ()),
+        ($target->{admin}   ? (admin   => $target->{admin})   : ()),
+        ($perlbrew          ? (perlbrew => $perlbrew)          : ()),
     };
 }
 
