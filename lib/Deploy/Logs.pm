@@ -3,11 +3,21 @@ package Deploy::Logs;
 use Mojo::Base -base, -signatures;
 use Path::Tiny qw(path);
 
-has 'config';  # Deploy::Config instance
+has 'config';     # Deploy::Config instance
+has 'transport';  # Deploy::Local or Deploy::SSH instance (optional)
 
 sub tail ($self, $name, $type = 'stderr', $n = 100) {
     my $logfile = $self->_logfile($name, $type);
     return { status => 'error', message => "Unknown service or log type" } unless $logfile;
+
+    if ($self->transport) {
+        my $r = $self->transport->run("tail -n $n $logfile");
+        return {
+            status => $r->{ok} ? 'success' : 'error',
+            data   => { lines => [split /\n/, $r->{output}], type => $type, file => $logfile },
+        };
+    }
+
     return { status => 'error', message => "Log file not found: $logfile" } unless -f $logfile;
 
     my @lines = path($logfile)->lines_utf8({ chomp => 1 });
@@ -31,6 +41,28 @@ sub tail ($self, $name, $type = 'stderr', $n = 100) {
 sub search ($self, $name, $query, $type = 'stderr', $n = 50) {
     my $logfile = $self->_logfile($name, $type);
     return { status => 'error', message => "Unknown service or log type" } unless $logfile;
+
+    if ($self->transport) {
+        my $r = $self->transport->run("grep -n " . quotemeta($query) . " $logfile | tail -n $n");
+        my @matches;
+        for my $line (split /\n/, $r->{output} // '') {
+            if ($line =~ /^(\d+):(.*)/) {
+                push @matches, { line => $1 + 0, text => $2 };
+            }
+        }
+        return {
+            status  => 'success',
+            message => scalar(@matches) . " matches for '$query' in $type log",
+            data    => {
+                service => $name,
+                type    => $type,
+                query   => $query,
+                matches => \@matches,
+                total   => scalar @matches,
+            },
+        };
+    }
+
     return { status => 'error', message => "Log file not found: $logfile" } unless -f $logfile;
 
     my @lines = path($logfile)->lines_utf8({ chomp => 1 });
@@ -55,6 +87,19 @@ sub search ($self, $name, $query, $type = 'stderr', $n = 50) {
             total   => scalar @matches,
         },
     };
+}
+
+sub stream ($self, $name, %opts) {
+    my $type = $opts{type} // 'stdout';
+    my $svc = $self->config->service($name);
+    return { status => 'error', message => "Unknown service: $name" } unless $svc;
+
+    my $logfile = $svc->{logs}{$type};
+    return { status => 'error', message => "No $type log configured for $name" } unless $logfile;
+
+    say "Streaming $type for $name: $logfile";
+    say "Press Ctrl-C to stop.\n";
+    $self->transport->stream("tail -f $logfile", on_line => $opts{on_line});
 }
 
 sub analyse ($self, $name, $n = 1000) {

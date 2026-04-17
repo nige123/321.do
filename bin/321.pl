@@ -54,6 +54,7 @@ app->attr(config_obj    => sub { $config });
 app->attr(ubic_mgr_obj  => sub { $ubic_mgr });
 app->attr(nginx_mgr_obj => sub { $nginx_mgr });
 app->attr(svc_mgr_obj   => sub { $service_mgr });
+app->attr(log_mgr_obj   => sub { $logs_mgr });
 
 helper config    => sub { $config };
 helper svc_mgr   => sub { $service_mgr };
