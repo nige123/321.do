@@ -4,8 +4,9 @@ use Mojo::Base -base, -signatures;
 use Path::Tiny qw(path);
 use Deploy::CertProvider;
 
-has 'config';  # Deploy::Config instance
-has 'log';     # Mojo::Log instance (optional)
+has 'config';     # Deploy::Config instance
+has 'log';        # Mojo::Log instance (optional)
+has 'transport';  # Deploy::SSH or Deploy::Local instance (optional)
 
 has 'sites_available' => '/etc/nginx/sites-available';
 has 'sites_enabled'   => '/etc/nginx/sites-enabled';
@@ -30,8 +31,20 @@ sub generate ($self, $name) {
     my $has_ssl  = -f $paths->{cert};
 
     my $conf = $self->_render_config($host, $port, $has_ssl, $paths);
+
+    if ($self->transport && $self->transport->isa('Deploy::SSH')) {
+        require File::Temp;
+        my $tmp = File::Temp->new(SUFFIX => '.conf');
+        print $tmp $conf;
+        close $tmp;
+        $self->transport->upload($tmp->filename, "/tmp/$host.conf");
+        $self->transport->run("sudo mv /tmp/$host.conf /etc/nginx/sites-available/$host");
+    } else {
+        my $file = path($self->sites_available, $host);
+        $file->spew_utf8($conf);
+    }
+
     my $file = path($self->sites_available, $host);
-    $file->spew_utf8($conf);
     $self->log->info("Generated nginx config: $file") if $self->log;
 
     return { status => 'ok', file => "$file", host => $host, port => $port, ssl => $has_ssl };
@@ -45,26 +58,39 @@ sub enable ($self, $name) {
     my $source = path($self->sites_available, $host);
     my $link   = path($self->sites_enabled, $host);
 
-    return { status => 'error', message => "Config not found: $source" } unless $source->exists;
-
-    unlink $link if -l $link;
-    symlink($source->absolute, $link)
-        or return { status => 'error', message => "Symlink failed: $!" };
+    if ($self->transport && $self->transport->isa('Deploy::SSH')) {
+        my $r = $self->transport->run(
+            "sudo ln -sf /etc/nginx/sites-available/$host /etc/nginx/sites-enabled/$host"
+        );
+        return { status => 'error', message => "Symlink failed: $r->{output}" } unless $r->{ok};
+    } else {
+        return { status => 'error', message => "Config not found: $source" } unless $source->exists;
+        unlink $link if -l $link;
+        symlink($source->absolute, $link)
+            or return { status => 'error', message => "Symlink failed: $!" };
+    }
 
     $self->log->info("Enabled nginx site: $host") if $self->log;
     return { status => 'ok', link => "$link" };
 }
 
 sub test ($self) {
+    if ($self->transport) {
+        my $r = $self->transport->run('sudo nginx -t');
+        return { ok => $r->{ok}, output => $r->{output} };
+    }
     my $output = `nginx -t 2>&1`;
-    my $ok = $? == 0;
-    return { status => ($ok ? 'ok' : 'error'), output => $output };
+    return { ok => ($? == 0), output => $output };
 }
 
 sub reload ($self) {
     my $test = $self->test;
-    return $test unless $test->{status} eq 'ok';
+    return { status => 'error', message => "nginx -t failed: $test->{output}" } unless $test->{ok};
 
+    if ($self->transport) {
+        my $r = $self->transport->run('sudo systemctl reload nginx');
+        return { status => $r->{ok} ? 'ok' : 'error', output => $r->{output} };
+    }
     my $output = `systemctl reload nginx 2>&1`;
     my $ok = $? == 0;
     $self->log->info("Nginx reloaded") if $self->log && $ok;
@@ -101,8 +127,8 @@ sub setup ($self, $name) {
     push @steps, { step => 'enable_site', success => $en->{status} eq 'ok' ? \1 : \0, output => $en->{link} // $en->{message} };
 
     my $test = $self->test;
-    push @steps, { step => 'test_config', success => $test->{status} eq 'ok' ? \1 : \0, output => $test->{output} };
-    return { status => 'error', message => 'Nginx config test failed', steps => \@steps } unless $test->{status} eq 'ok';
+    push @steps, { step => 'test_config', success => $test->{ok} ? \1 : \0, output => $test->{output} };
+    return { status => 'error', message => 'Nginx config test failed', steps => \@steps } unless $test->{ok};
 
     my $reload = $self->reload;
     push @steps, { step => 'reload_nginx', success => $reload->{status} eq 'ok' ? \1 : \0, output => $reload->{output} };
