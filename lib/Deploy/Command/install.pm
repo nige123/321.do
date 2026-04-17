@@ -1,116 +1,142 @@
 package Deploy::Command::install;
 
 use Mojo::Base 'Deploy::Command', -signatures;
-use Deploy::Hosts;
 
-has description => 'First-time install: clone, deps, ubic, nginx, certbot';
+has description => 'First-time install: clone, perlbrew, deps, ubic, nginx, ssl';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
-    die $self->usage unless @args;
-    my $name = $self->resolve_service($args[0]);
+    my ($svc_input, $target) = $self->parse_target(@args);
+    die $self->usage unless $svc_input;
+    my $name = $self->resolve_service($svc_input);
+    my $transport = $self->transport_for($name, $target);
 
-    my $svc      = $self->config->service($name);
+    my $cfg = $self->config;
+    $cfg->target($target);
+    my $svc = $cfg->service($name);
+
     my $repo     = $svc->{repo};
     my $branch   = $svc->{branch} // 'master';
     my $perlbrew = $svc->{perlbrew};
     my $host     = $svc->{host} // 'localhost';
     my $port     = $svc->{port};
 
-    say "3... 2... 1... installing $name";
+    say "3... 2... 1... installing $name ($target)";
     say "";
 
-    # Step 1: Clone repo
-    if (-d $repo) {
-        say "  [OK] Repo already exists: $repo";
-    } else {
-        say "  Cloning repo to $repo...";
-        my $git_url = $self->_guess_git_url($repo);
-        if ($git_url) {
-            $self->run_cmd("git clone -b $branch $git_url $repo");
-            say "  [OK] Cloned $git_url";
+    # Step 1: Check/install perlbrew
+    if ($perlbrew) {
+        say "  Checking perlbrew...";
+        my $r = $transport->run('which perlbrew 2>/dev/null || echo MISSING');
+        if ($r->{output} =~ /MISSING/) {
+            say "  Installing perlbrew...";
+            $r = $transport->run('curl -L https://install.perlbrew.pl | bash && echo "source ~/perl5/perlbrew/etc/bashrc" >> ~/.bashrc', timeout => 120);
+            die "  perlbrew install failed: $r->{output}\n" unless $r->{ok};
+            say "  [OK] perlbrew installed";
         } else {
-            die "  Repo $repo does not exist and no git URL found.\n";
+            say "  [OK] perlbrew already installed";
         }
+
+        # Step 2: Check/install perl version
+        say "  Checking $perlbrew...";
+        $r = $transport->run("perlbrew list | grep -q '$perlbrew'");
+        unless ($r->{ok}) {
+            say "  Installing $perlbrew (this takes 10-20 minutes)...";
+            $r = $transport->run("perlbrew install $perlbrew --notest -j4", timeout => 1800);
+            die "  $perlbrew install failed: $r->{output}\n" unless $r->{ok};
+            say "  [OK] $perlbrew installed";
+        } else {
+            say "  [OK] $perlbrew available";
+        }
+
+        # Step 3: Install cpanm
+        say "  Checking cpanm...";
+        $r = $transport->run('perlbrew install-cpanm 2>&1');
+        say "  [OK] cpanm ready";
     }
 
-    # Step 1b: Validate manifest
-    require Deploy::Manifest;
-    my $manifest = Deploy::Manifest->load($repo);
-    unless ($manifest) {
-        die "\n  No .321.yml in $repo\n"
-          . "  Every service repo must ship a manifest.\n"
-          . "  See CLAUDE.md -> Service Repo Contract\n";
+    # Step 4: Clone repo
+    say "  Checking repo $repo...";
+    my $r = $transport->run("test -d $repo && echo EXISTS");
+    if ($r->{output} =~ /EXISTS/) {
+        say "  [OK] Repo already exists";
+    } else {
+        say "  Cloning repo...";
+        my $git_url = $self->_guess_git_url($repo);
+        die "  No repo at $repo and cannot guess git URL\n" unless $git_url;
+        $r = $transport->run("git clone -b $branch $git_url $repo", timeout => 120);
+        die "  Clone failed: $r->{output}\n" unless $r->{ok};
+        say "  [OK] Cloned $git_url";
     }
-    say "  [OK] Manifest: $manifest->{name} ($manifest->{runner}, $manifest->{entry})";
 
-    # Step 2: Install deps
+    # Check manifest
+    $r = $transport->run("test -f $repo/321.yml && echo FOUND");
+    unless ($r->{output} =~ /FOUND/) {
+        die "  No 321.yml manifest in $repo. Every service repo must ship one.\n";
+    }
+    say "  [OK] Manifest found";
+
+    # Step 5: Install deps
     say "  Installing dependencies...";
-    my $ok = $self->run_cpanm($repo, $perlbrew);
-    say $ok ? "  [OK] Dependencies installed" : "  [WARN] cpanm had errors (continuing)";
+    $r = $transport->run_in_dir($repo, 'cpanm -L local --notest --installdeps .', timeout => 600);
+    say $r->{ok} ? "  [OK] Dependencies installed" : "  [WARN] cpanm had errors (continuing)";
 
-    # Step 3: Ubic service
-    say "  Setting up ubic service...";
+    # Step 6: Bootstrap ubic (first time)
+    $r = $transport->run('test -f ~/.ubic.cfg && echo EXISTS');
+    unless ($r->{output} =~ /EXISTS/) {
+        say "  Bootstrapping ubic...";
+        $transport->run('cpanm --notest Ubic Ubic::Service::SimpleDaemon', timeout => 300);
+        $r = $transport->run('ubic-admin setup --batch-mode --local');
+        die "  ubic-admin setup failed: $r->{output}\n" unless $r->{ok};
+        say "  [OK] Ubic bootstrapped";
+    } else {
+        say "  [OK] Ubic already set up";
+    }
+
+    # Step 7: Generate ubic service file
+    say "  Generating ubic service...";
     my $gen = $self->ubic->generate($name);
-    say "  [OK] Generated: $gen->{path}";
+    if ($svc->{ssh}) {
+        $transport->run("mkdir -p \$(dirname $gen->{path})");
+        $transport->upload($gen->{path}, $gen->{path});
+    }
     $self->ubic->install_symlinks;
-    say "  [OK] Symlinks installed";
+    say "  [OK] Ubic service ready";
 
-    # Step 4: Start service
+    # Step 8: Start service
     say "  Starting service...";
-    system("ubic start $name 2>&1");
+    $r = $transport->run("ubic start $name 2>&1");
     say "  [OK] Service started";
 
-    # Step 5: Nginx + SSL
+    # Step 9: Nginx
     if ($host ne 'localhost' && $port) {
         say "  Setting up nginx for $host -> :$port...";
-        my $result = $self->nginx->setup($name);
-        for my $step (@{ $result->{steps} // [] }) {
+        my $nginx_result = $self->nginx->setup($name);
+        for my $step (@{ $nginx_result->{steps} // [] }) {
             my $s = ref $step->{success} ? ${$step->{success}} : $step->{success};
             printf "  [%s] %s\n", ($s ? 'OK' : 'WARN'), $step->{step};
         }
 
-        my $target = $self->config->target;
+        # Step 10: SSL cert
         my $provider = $self->nginx->cert_provider->pick($target);
-        say "  Requesting SSL certificate for $host via $provider...";
+        say "  Requesting SSL certificate via $provider...";
         my $cert = $self->nginx->acquire_cert($name);
         if ($cert->{status} eq 'ok') {
             say "  [OK] SSL cert ready ($provider)";
             $self->nginx->generate($name);
             $self->nginx->reload;
         } else {
-            my $hint = $provider eq 'mkcert'
-                ? "    # macOS:  brew install mkcert\n"
-                . "    # Linux:  sudo apt install libnss3-tools mkcert\n"
-                . "    mkcert -install\n"
-                : "    sudo certbot certonly --standalone -d $host\n";
-            warn "  [WARN] $provider failed:\n";
-            warn "    $_\n" for split /\n/, ($cert->{output} // '');
-            warn $hint;
+            warn "  [WARN] $provider failed - run manually later\n";
         }
-    } else {
-        say "  [SKIP] No host/port, skipping nginx";
-    }
-
-    # Refresh /etc/hosts managed block (dev hostnames)
-    my $dev_hosts = $self->config->dev_hostnames;
-    if (@$dev_hosts && -w '/etc/hosts') {
-        my $ok = eval { Deploy::Hosts->new->write($dev_hosts); 1 };
-        if ($ok) {
-            say "  [OK] /etc/hosts refreshed (" . scalar(@$dev_hosts) . " dev hosts)";
-        } else {
-            warn "  [WARN] /etc/hosts update failed: $@";
-        }
-    } elsif (@$dev_hosts) {
-        say "  [SKIP] /etc/hosts not writable - run: sudo -E perl bin/321.pl hosts";
     }
 
     say "";
-    say "  $name installed.";
+    say "  $name installed on $target.";
 }
 
 sub _guess_git_url ($self, $repo) {
     my $parent = Mojo::File->new($repo)->dirname;
+    return undef unless -d $parent;
     for my $sibling ($parent->list->each) {
         next unless -d "$sibling/.git";
         my $url = `cd $sibling && git remote get-url origin 2>/dev/null`;
@@ -128,11 +154,11 @@ sub _guess_git_url ($self, $repo) {
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION install <service>
+  Usage: APPLICATION install <service> [target]
 
-  Options:
-    -h, --help   Show this message
+  First-time setup: clone, perlbrew, deps, ubic, nginx, SSL.
 
-  321 install zorda.web   # clone, deps, ubic, nginx, certbot
+  321 install love.web         # install locally
+  321 install love.web live    # install on remote server via SSH
 
 =cut
