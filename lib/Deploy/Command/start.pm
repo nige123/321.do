@@ -6,10 +6,16 @@ has description => 'Start a service';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
-    die $self->usage unless @args;
-    my $name = $self->resolve_service($args[0]);
-    say "Starting $name";
-    $self->run_cmd("ubic start $name");
+    my ($svc_input, $target) = $self->parse_target(@args);
+    die $self->usage unless $svc_input;
+    my $name = $self->resolve_service($svc_input);
+    my $transport = $self->transport_for($name, $target);
+    my $r = $transport->run("ubic start $name");
+    if ($r->{ok}) {
+        say "  $name started ($target)";
+    } else {
+        say "  $name start failed: $r->{output}";
+    }
 }
 
 1;

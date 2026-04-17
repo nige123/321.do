@@ -6,13 +6,17 @@ has description => 'List all services';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
-    for my $name (@{ $self->config->service_names }) {
-        my $svc    = $self->config->service($name);
-        my $mode   = $svc->{mode}   // 'production';
-        my $runner = $svc->{runner} // 'hypnotoad';
-        my $port   = $svc->{port}   // "\x{2014}";
-        my $tag    = $mode eq 'development' ? "\e[35mDEV\e[0m" : "\e[32mLIVE\e[0m";
-        printf "  %-20s %s  %-10s  port %s\n", $name, $tag, $runner, $port;
+    my (undef, $target) = $self->parse_target(@args);
+    my $cfg = $self->config;
+    $cfg->target($target);
+
+    for my $name (@{ $cfg->service_names }) {
+        my $svc = $cfg->service($name);
+        printf "  %-20s %-5s %-12s port %s\n",
+            $name,
+            uc($svc->{mode} eq 'development' ? 'DEV' : 'LIVE'),
+            $svc->{runner},
+            $svc->{port} // '-';
     }
 }
 

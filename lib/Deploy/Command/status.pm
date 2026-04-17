@@ -6,15 +6,18 @@ has description => 'Show service status';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
-    if (@args) {
-        my $name = $self->resolve_service($args[0]);
-        system("ubic status $name");
+    my ($svc_input, $target) = $self->parse_target(@args);
+    my $transport;
+
+    if ($svc_input) {
+        my $name = $self->resolve_service($svc_input);
+        $transport = $self->transport_for($name, $target);
+        my $r = $transport->run("ubic status $name");
+        say $r->{output};
     } else {
-        for my $name (@{ $self->config->service_names }) {
-            my $out = `ubic status $name 2>&1`;
-            chomp $out;
-            printf "  %-20s %s\n", $name, $out;
-        }
+        $transport = $self->transport_for(($self->config->service_names->[0] // return), $target);
+        my $r = $transport->run("ubic status");
+        say $r->{output};
     }
 }
 

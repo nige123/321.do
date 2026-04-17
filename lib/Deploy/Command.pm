@@ -25,6 +25,26 @@ sub resolve_service ($self, $input) {
         : "Unknown service: $input\nServices: " . join(', ', @names) . "\n";
 }
 
+sub parse_target ($self, @args) {
+    return (undef, 'dev') unless @args;
+    if (@args == 1) {
+        return ($args[0], 'dev');
+    }
+    my ($svc_input, $target_input) = @args;
+    return ($svc_input, $target_input);
+}
+
+sub transport_for ($self, $name, $target) {
+    require Deploy::Transport;
+    my $cfg = $self->config;
+    my $old_target = $cfg->target;
+    $cfg->target($target);
+    my $svc = $cfg->service($name);
+    $cfg->target($old_target);
+    return undef unless $svc;
+    return Deploy::Transport->for_target($svc, perlbrew => $svc->{perlbrew});
+}
+
 sub run_cmd ($self, $cmd) {
     system($cmd) == 0 or die "Command failed: $cmd\n";
 }

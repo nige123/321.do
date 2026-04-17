@@ -6,21 +6,22 @@ has description => 'Deploy a service: git pull, cpanm, ubic restart';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
-    die $self->usage unless @args;
-    my $name = $self->resolve_service($args[0]);
+    my ($svc_input, $target) = $self->parse_target(@args);
+    die $self->usage unless $svc_input;
+    my $name = $self->resolve_service($svc_input);
+    my $transport = $self->transport_for($name, $target);
 
-    say "3... 2... 1... go! Deploying $name";
-    my $svc      = $self->config->service($name);
-    my $skip_git = ($svc->{mode} // 'production') eq 'development';
+    my $svc_mgr = $self->svc_mgr;
+    $svc_mgr->transport($transport);
 
-    my $result = $self->svc_mgr->deploy($name, skip_git => $skip_git);
-
-    for my $step (@{ $result->{data}{steps} // [] }) {
-        my $ok = ref $step->{success} ? ${$step->{success}} : $step->{success};
+    say "3... 2... 1... deploying $name ($target)";
+    my $skip_git = ($target eq 'dev') ? 1 : 0;
+    my $r = $svc_mgr->deploy($name, skip_git => $skip_git);
+    for my $step (@{ $r->{data}{steps} // [] }) {
+        my $ok = $svc_mgr->_ok($step);
         printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $step->{step};
     }
-    say "  $result->{message}";
-    exit 1 if $result->{status} ne 'success';
+    say "  $r->{message}" if $r->{message};
 }
 
 1;

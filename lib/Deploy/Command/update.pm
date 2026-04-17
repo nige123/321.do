@@ -6,16 +6,19 @@ has description => 'Update: git pull + cpanm + migrate (no restart)';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
-    die $self->usage unless @args;
-    my $name = $self->resolve_service($args[0]);
-    say "Updating $name (pull + deps + migrate, no restart)";
+    my ($svc_input, $target) = $self->parse_target(@args);
+    die $self->usage unless $svc_input;
+    my $name = $self->resolve_service($svc_input);
+    my $transport = $self->transport_for($name, $target);
 
-    my $r = $self->svc_mgr->update($name);
-    for my $s (@{ $r->{data}{steps} }) {
-        my $ok = ref $s->{success} ? ${$s->{success}} : $s->{success};
-        printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $s->{step};
+    my $svc_mgr = $self->svc_mgr;
+    $svc_mgr->transport($transport);
+    my $r = $svc_mgr->update($name);
+    for my $step (@{ $r->{data}{steps} // [] }) {
+        my $ok = $svc_mgr->_ok($step);
+        printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $step->{step};
     }
-    say $r->{status} eq 'success' ? "  $name updated." : "  FAILED: $r->{message}";
+    say "  $r->{message}" if $r->{message};
 }
 
 1;
