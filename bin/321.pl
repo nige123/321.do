@@ -609,7 +609,6 @@ body::after {
 /* ═══ LAYOUT ═══ */
 
 .main {
-    max-width: 1200px;
     margin: 0 auto;
     padding: 32px 24px;
     position: relative;
@@ -662,7 +661,7 @@ body::after {
 
 .svc-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px;
 }
 
