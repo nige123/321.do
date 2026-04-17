@@ -111,7 +111,7 @@ sub _build_bin_cmd ($self, $svc) {
     # Point the runtime at the repo's own local::lib tree (populated by
     # `cpanm -L local/ --installdeps .` during deploy).
     $all_env{PERL5LIB} = "$repo/local/lib/perl5";
-    $all_env{PATH}     = "$repo/local/bin:" . ($ENV{PATH} // '/usr/local/bin:/usr/bin:/bin');
+    $all_env{PATH}     = "$repo/local/bin:/usr/local/bin:/usr/bin:/bin";
 
     my $env_str = '';
     if (%all_env) {
