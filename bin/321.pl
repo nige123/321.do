@@ -792,8 +792,8 @@ body::after {
 }
 
 .svc-favicon {
-    width: 18px;
-    height: 18px;
+    width: 27px;
+    height: 27px;
     object-fit: contain;
     flex-shrink: 0;
     opacity: 0.85;
@@ -801,7 +801,7 @@ body::after {
 
 .svc-name {
     font-family: var(--display);
-    font-size: 19px;
+    font-size: 29px;
     font-weight: 600;
     letter-spacing: 1px;
     display: flex;
@@ -830,8 +830,8 @@ body::after {
 }
 
 .status-led {
-    width: 12px;
-    height: 12px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     flex-shrink: 0;
     margin-top: 4px;
