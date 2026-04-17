@@ -18,7 +18,7 @@ use Deploy::Service;
 use Deploy::Logs;
 use Deploy::Ubic;
 use Deploy::Nginx;
-use Deploy::Secrets;
+use Deploy::Transport;
 use Text::Markdown qw(markdown);
 
 # --- Config ---
@@ -45,8 +45,6 @@ my $nginx_mgr = Deploy::Nginx->new(
     log    => app->log,
 );
 
-my $secrets_mgr = Deploy::Secrets->new(app_home => $app_home);
-
 # --- Helpers ---
 
 # App-level accessors for command modules
@@ -61,10 +59,15 @@ helper svc_mgr   => sub { $service_mgr };
 helper log_mgr   => sub { $logs_mgr };
 helper ubic_mgr  => sub { $ubic_mgr };
 helper nginx_mgr => sub { $nginx_mgr };
-helper secrets_mgr => sub { $secrets_mgr };
 
-helper active_target => sub ($c) {
-    return $c->cookie('target') // (app->mode eq 'development' ? 'dev' : 'live');
+helper available_targets => sub ($c) {
+    my %seen;
+    my @targets;
+    for my $name (@{ $config->service_names }) {
+        my $raw = $config->service_raw($name);
+        push @targets, keys %{ $raw->{targets} // {} };
+    }
+    return [ sort grep { !$seen{$_}++ } @targets ];
 };
 
 helper json_response => sub ($c, $status, $message, $data = {}) {
@@ -84,41 +87,6 @@ helper validate_service => sub ($c, $name) {
         return 0;
     }
     return 1;
-};
-
-# --- Auth ---
-
-under '/' => sub ($c) {
-    # Set config target from cookie (defaults: dev in development, live in production)
-    $config->target($c->active_target);
-
-    my $path = $c->req->url->path->to_string;
-
-    # /health is public
-    return 1 if $path eq '/health';
-
-    # Skip auth in development mode
-    return 1 if app->mode eq 'development';
-
-    my $url_userinfo = $c->req->url->to_abs->userinfo // '';
-    if ($url_userinfo eq '321:kaizen') {
-        return 1;
-    }
-
-    if (my $userinfo = $c->req->headers->authorization) {
-        if ($userinfo =~ /^Basic\s+(.+)$/) {
-            require MIME::Base64;
-            my $decoded = MIME::Base64::decode_base64($1);
-            if ($decoded eq '321:kaizen') {
-                return 1;
-            }
-        }
-    }
-
-    $c->res->headers->www_authenticate('Basic realm="321.do"');
-    $c->res->code(401);
-    $c->render(text => 'Authentication required', status => 401);
-    return 0;
 };
 
 # --- Routes ---
@@ -141,27 +109,17 @@ get '/health' => sub ($c) {
 
 # List all services
 get '/services' => sub ($c) {
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     my $services = $service_mgr->all_status;
-    for my $svc_status (@$services) {
-        my $svc = $config->service($svc_status->{name});
-        next unless $svc;
-        my $diff = $secrets_mgr->diff($svc_status->{name}, {
-            required => $svc->{env_required} // {},
-            optional => $svc->{env_optional} // {},
-        });
-        my $req_count = scalar keys %{ $svc->{env_required} // {} };
-        $svc_status->{secrets} = {
-            required => $req_count,
-            present  => $req_count - scalar @{ $diff->{missing} },
-            missing  => $diff->{missing},
-        };
-    }
     $c->json_response(success => scalar(@$services) . ' services registered', $services);
 };
 
 # Service status
 get '/service/#name/status' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
 
     my $status = $service_mgr->status($name);
@@ -170,44 +128,61 @@ get '/service/#name/status' => sub ($c) {
 
 # Deploy a service (production: git pull + cpanm + ubic restart)
 post '/service/#name/deploy' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
+
+    my $svc       = $config->service($name);
+    my $transport = Deploy::Transport->for_target($svc, perlbrew => $svc->{perlbrew});
+    $service_mgr->transport($transport);
 
     app->log->info("Deploy requested for $name");
     my $result = $service_mgr->deploy($name);
     $c->render(json => $result);
 };
 
-# Deploy dev (skip git pull, just cpanm + ubic restart)
-post '/service/#name/deploy-dev' => sub ($c) {
-    my $name = $c->param('name');
-    return unless $c->validate_service($name);
-
-    app->log->info("Dev deploy requested for $name");
-    my $result = $service_mgr->deploy_dev($name);
-    $c->render(json => $result);
-};
-
 # Update (git pull + cpanm + migrate, no restart)
 post '/service/#name/update' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
+
+    my $svc       = $config->service($name);
+    my $transport = Deploy::Transport->for_target($svc, perlbrew => $svc->{perlbrew});
+    $service_mgr->transport($transport);
+
     my $result = $service_mgr->update($name);
     $c->render(json => $result);
 };
 
 # Run database migrations only
 post '/service/#name/migrate' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
+
+    my $svc       = $config->service($name);
+    my $transport = Deploy::Transport->for_target($svc, perlbrew => $svc->{perlbrew});
+    $service_mgr->transport($transport);
+
     my $result = $service_mgr->migrate($name);
     $c->render(json => $result);
 };
 
 # Restart via service manager (ubic restart + port check)
 post '/service/#name/restart' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
+
+    my $svc       = $config->service($name);
+    my $transport = Deploy::Transport->for_target($svc, perlbrew => $svc->{perlbrew});
+    $service_mgr->transport($transport);
+
     my $result = $service_mgr->restart($name);
     $c->render(json => $result);
 };
@@ -215,7 +190,9 @@ post '/service/#name/restart' => sub ($c) {
 # Start/stop a service via ubic
 for my $action (qw(start stop)) {
     post "/service/#name/$action" => sub ($c) {
-        my $name = $c->param('name');
+        my $name   = $c->param('name');
+        my $target = $c->param('target') // 'dev';
+        $config->target($target);
         return unless $c->validate_service($name);
 
         app->log->info("$action requested for $name");
@@ -232,7 +209,9 @@ for my $action (qw(start stop)) {
 
 # Tail logs
 get '/service/#name/logs' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
 
     my $type = $c->param('type') // 'stderr';
@@ -246,7 +225,9 @@ get '/service/#name/logs' => sub ($c) {
 
 # Search logs
 get '/service/#name/logs/search' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
 
     my $query = $c->param('q');
@@ -265,7 +246,9 @@ get '/service/#name/logs/search' => sub ($c) {
 
 # Analyse logs
 get '/service/#name/logs/analyse' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
 
     my $n = $c->param('n') // 1000;
@@ -276,74 +259,16 @@ get '/service/#name/logs/analyse' => sub ($c) {
     $c->render(json => $result);
 };
 
-# Generate ubic service files from services.yml
-post '/services/generate-ubic' => sub ($c) {
-    app->log->info("Generating ubic service files");
-    my $generated = $ubic_mgr->generate_all;
-    my $symlinks  = $ubic_mgr->install_symlinks;
-    $c->json_response(success => 'Ubic service files generated', {
-        generated => $generated,
-        symlinks  => $symlinks,
-    });
-};
-
 # --- Config CRUD ---
 
 # Get raw service config (decrypted)
 get '/service/#name/config' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
     my $raw = $config->service_raw($name);
     $c->json_response(success => "Config for $name", $raw);
-};
-
-# Update service config
-post '/service/#name/config' => sub ($c) {
-    my $name = $c->param('name');
-    my $data = $c->req->json;
-    return $c->json_response(error => 'Invalid JSON body') unless $data;
-
-    app->log->info("Config update for $name");
-    my $file = $config->save_service($name, $data);
-
-    $c->git_commit("services/$name.yml", "Update config: $name");
-    $c->json_response(success => "Config saved for $name", { file => "$file" });
-};
-
-# Create new service
-post '/services/create' => sub ($c) {
-    my $data = $c->req->json;
-    return $c->json_response(error => 'Invalid JSON body') unless $data;
-
-    my $name = $data->{name};
-    return $c->json_response(error => 'Missing service name') unless $name;
-    return $c->json_response(error => "Service $name already exists") if $config->service($name);
-
-    app->log->info("Creating service: $name");
-    my $file = $config->save_service($name, $data);
-
-    $c->git_commit("services/$name.yml", "Add service: $name");
-
-    # Generate ubic file
-    if ($ubic_mgr) {
-        $ubic_mgr->generate($name);
-        $ubic_mgr->install_symlinks;
-    }
-
-    $c->json_response(success => "Service $name created", { file => "$file" });
-};
-
-# Delete service
-post '/service/#name/delete' => sub ($c) {
-    my $name = $c->param('name');
-    return $c->json_response(error => "Unknown service: $name") unless $config->service($name);
-
-    app->log->info("Deleting service: $name");
-    $config->delete_service($name);
-
-    $c->git_commit("services/$name.yml", "Remove service: $name");
-
-    $c->json_response(success => "Service $name deleted");
 };
 
 # --- Git operations ---
@@ -360,128 +285,15 @@ get '/git/status' => sub ($c) {
     });
 };
 
-post '/git/push' => sub ($c) {
-    app->log->info("Git push requested");
-    my $output = `cd \Q$app_home\E && git push 2>&1`;
-    my $ok = $? == 0;
-    if ($ok) {
-        $c->json_response(success => 'Pushed successfully', { output => $output });
-    } else {
-        $c->json_response(error => 'Push failed', { output => $output });
-    }
-};
-
 # --- Nginx management ---
 
 get '/service/#name/nginx' => sub ($c) {
-    my $name = $c->param('name');
+    my $name   = $c->param('name');
+    my $target = $c->param('target') // 'dev';
+    $config->target($target);
     return unless $c->validate_service($name);
     my $status = $nginx_mgr->status($name);
     $c->json_response(success => "Nginx status for $name", $status);
-};
-
-post '/service/#name/nginx/setup' => sub ($c) {
-    my $name = $c->param('name');
-    return unless $c->validate_service($name);
-
-    app->log->info("Nginx setup for $name");
-    my $result = $nginx_mgr->setup($name);
-    my $ok = $result->{status} eq 'ok';
-    $c->render(json => {
-        status  => $ok ? 'success' : 'error',
-        message => $result->{message},
-        data    => { steps => $result->{steps} },
-    });
-};
-
-post '/service/#name/nginx/certbot' => sub ($c) {
-    my $name = $c->param('name');
-    return unless $c->validate_service($name);
-
-    app->log->info("Certbot for $name");
-    my $result = $nginx_mgr->certbot($name);
-
-    if ($result->{status} eq 'ok') {
-        # Regenerate config with SSL and reload
-        $nginx_mgr->generate($name);
-        $nginx_mgr->reload;
-        $c->json_response(success => "SSL certificate obtained", $result);
-    } else {
-        $c->json_response(error => "Certbot failed", $result);
-    }
-};
-
-# --- Secrets ---
-
-get '/service/#name/secrets' => sub ($c) {
-    my $name = $c->param('name');
-    return unless $c->validate_service($name);
-    my $svc = $config->service($name);
-
-    my $diff = $secrets_mgr->diff($name, {
-        required => $svc->{env_required} // {},
-        optional => $svc->{env_optional} // {},
-    });
-    $c->json_response(success => 'ok', {
-        required     => [ sort keys %{ $svc->{env_required} // {} } ],
-        optional     => $svc->{env_optional} // {},
-        missing      => $diff->{missing},
-        present      => $diff->{present},
-        optional_set => $diff->{optional_set},
-    });
-};
-
-post '/service/#name/secrets' => sub ($c) {
-    my $name = $c->param('name');
-    return unless $c->validate_service($name);
-    my $body = $c->req->json // {};
-    my $key  = $body->{key};
-    my $val  = $body->{value} // '';
-    return $c->json_response(error => 'key required') unless $key;
-
-    my $ok = eval {
-        $secrets_mgr->set($name, $key, $val, actor => '321');
-        1;
-    };
-    return $c->json_response(error => ($@ // 'set failed')) unless $ok;
-    $c->json_response(success => "set $key for $name");
-};
-
-post '/service/#name/secrets/delete' => sub ($c) {
-    my $name = $c->param('name');
-    return unless $c->validate_service($name);
-    my $body = $c->req->json // {};
-    my $key  = $body->{key};
-    return $c->json_response(error => 'key required') unless $key;
-
-    my $ok = eval {
-        $secrets_mgr->delete($name, $key, actor => '321');
-        1;
-    };
-    return $c->json_response(error => ($@ // 'delete failed')) unless $ok;
-    $c->json_response(success => "deleted $key from $name");
-};
-
-# --- Target switch ---
-
-post '/target' => sub ($c) {
-    my $target = $c->req->json->{target} // 'live';
-    $target = 'live' unless $target =~ /^[a-z]+$/;
-    $c->cookie(target => $target, { path => '/', expires => time + 86400 * 365 });
-    $config->target($target);
-    $c->json_response(success => "Switched to $target", { target => $target });
-};
-
-get '/target' => sub ($c) {
-    my $target = $c->active_target;
-    my $raw = $config->services;
-    my @available;
-    for my $name (sort keys %$raw) {
-        push @available, sort keys %{ $raw->{$name}{targets} // {} };
-    }
-    my %seen;
-    @available = grep { !$seen{$_}++ } @available;
-    $c->json_response(success => "Active target", { target => $target, available => \@available });
 };
 
 # --- UI Routes ---

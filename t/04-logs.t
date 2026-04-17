@@ -3,20 +3,11 @@ use warnings;
 use Test::More;
 use Test::Mojo;
 use Path::Tiny qw(path);
-use MIME::Base64;
-
-$ENV{MOJO_MODE} = 'production';
 
 my $t = Test::Mojo->new(Mojo::File->new('bin/321.pl'));
 
-my $auth = { Authorization => 'Basic ' . encode_base64('321:kaizen', '') };
-
-# Logs without auth
-$t->get_ok('/service/123.api/logs')
-  ->status_is(401);
-
-# Logs for unknown service
-$t->get_ok('/service/nonexistent/logs', $auth)
+# Logs for unknown service — no auth needed
+$t->get_ok('/service/nonexistent/logs')
   ->status_is(200)
   ->json_is('/status' => 'error');
 
@@ -31,18 +22,18 @@ $test_log->spew_utf8(join("\n",
 ) . "\n");
 
 # Search logs — missing query
-$t->get_ok('/service/123.api/logs/search', $auth)
+$t->get_ok('/service/123.api/logs/search')
   ->status_is(200)
   ->json_is('/status' => 'error')
   ->json_like('/message' => qr/Missing query/);
 
 # Analyse for unknown service
-$t->get_ok('/service/nonexistent/logs/analyse', $auth)
+$t->get_ok('/service/nonexistent/logs/analyse')
   ->status_is(200)
   ->json_is('/status' => 'error');
 
 # Analyse for known service (may have no log files in test env)
-$t->get_ok('/service/123.api/logs/analyse', $auth)
+$t->get_ok('/service/123.api/logs/analyse')
   ->status_is(200)
   ->json_has('/data/errors')
   ->json_has('/data/warnings')
