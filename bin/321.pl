@@ -981,9 +981,9 @@ body::after {
 .btn-deploy {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 18px;
-    letter-spacing: 3px;
-    padding: 10px 20px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    padding: 7px 14px;
     background: rgba(0, 255, 65, 0.05);
     border: 1px solid var(--phosphor-dim);
     color: var(--phosphor);
@@ -1029,9 +1029,9 @@ body::after {
 .btn-deploy-dev {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 18px;
-    letter-spacing: 3px;
-    padding: 10px 20px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    padding: 7px 14px;
     background: rgba(179, 136, 255, 0.05);
     border: 1px solid var(--dev-dim);
     color: var(--dev);
