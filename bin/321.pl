@@ -2140,7 +2140,6 @@ async function loadServices() {
         card.className = 'svc-card ' + (running ? 'running' : 'stopped');
         card.style.animationDelay = (idx * 0.08) + 's';
         const isDev = ACTIVE_TARGET === 'dev';
-        const deployBtnClass = isDev ? 'btn btn-deploy-dev' : 'btn btn-deploy';
         const deployLabel = isDev ? 'DEPLOY DEV' : 'DEPLOY';
         const faviconUrl = svc.favicon || (svc.host && svc.host !== 'localhost' ? 'https://' + svc.host + '/favicon.ico' : '');
         const faviconImg = faviconUrl ? '<img class="svc-favicon" src="' + esc(faviconUrl) + '" alt="" onerror="this.style.display=\'none\'">' : '';
@@ -2168,7 +2167,7 @@ async function loadServices() {
                 <a href="/ui/service/${svc.name}" class="btn btn-secondary">CONFIG</a>
                 ${svc.docs ? '<a href="' + svc.docs + '" target="_blank" class="btn btn-secondary btn-tint btn-docs">DOCS</a>' : ''}
                 ${svc.admin ? '<a href="' + svc.admin + '" target="_blank" class="btn btn-secondary btn-tint btn-admin">ADMIN</a>' : ''}
-                <button class="${deployBtnClass}" onclick="deployService('${svc.name}', this, ${isDev})" id="deploy-btn-${svc.name.replace(/\./g,'_')}">
+                <button class="btn btn-secondary" onclick="deployService('${svc.name}', this, ${isDev})" id="deploy-btn-${svc.name.replace(/\./g,'_')}">
                     <svg class="btn-icon" viewBox="0 0 16 16"><polygon points="4,2 4,14 14,8"/></svg> ${deployLabel}
                 </button>
             </div>
