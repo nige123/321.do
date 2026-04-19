@@ -5,14 +5,31 @@ use Path::Tiny qw(path);
 use Mojo::File qw(curfile);
 use Deploy::Manifest;
 
-has 'app_home'  => sub { $ENV{APP_HOME} // curfile->dirname->dirname->dirname };
-has 'scan_dir'  => sub { $ENV{SCAN_DIR} // '/home/s3' };
-has 'target'    => 'dev';
-has '_services' => sub ($self) { $self->_load_all };
+has 'app_home'   => sub { $ENV{APP_HOME} // curfile->dirname->dirname->dirname };
+has 'scan_dir'   => sub { $ENV{SCAN_DIR} // '/home/s3' };
+has 'target'     => 'dev';
+has '_services'  => sub ($self) { $self->_load_all };
+has '_mtimes'    => sub { {} };
 
 sub reload ($self) {
     $self->_services($self->_load_all);
     return $self;
+}
+
+sub _check_reload ($self) {
+    my $base = path($self->scan_dir);
+    return unless $base->exists;
+    for my $dir (sort $base->children) {
+        next unless $dir->is_dir;
+        my $file = $dir->child('321.yml');
+        next unless $file->exists;
+        my $mtime = $file->stat->mtime;
+        my $prev  = $self->_mtimes->{"$file"} // 0;
+        if ($mtime > $prev) {
+            $self->reload;
+            return;
+        }
+    }
 }
 
 sub _load_all ($self) {
@@ -20,20 +37,26 @@ sub _load_all ($self) {
     return {} unless $base->exists;
 
     my %services;
+    my %mtimes;
     for my $dir (sort $base->children) {
         next unless $dir->is_dir;
+        my $file = $dir->child('321.yml');
+        $mtimes{"$file"} = $file->stat->mtime if $file->exists;
         my $manifest = Deploy::Manifest->load($dir);
         next unless $manifest;
         $services{ $manifest->{name} } = $manifest;
     }
+    $self->_mtimes(\%mtimes);
     return \%services;
 }
 
 sub services ($self) {
+    $self->_check_reload;
     return $self->_services;
 }
 
 sub service ($self, $name) {
+    $self->_check_reload;
     my $manifest = $self->_services->{$name};
     return undef unless $manifest;
     return $self->_resolve($name, $manifest);
