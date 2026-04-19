@@ -30,8 +30,8 @@ live:
     host: 321.do
     port: 9321
     runner: hypnotoad
-    # ssh: deploy@321.do      # remote host for live deploys (optional)
-    # ssh_key: ~/.ssh/id_ed25519
+    ssh: ubuntu@ec2-34-248-234-254.eu-west-1.compute.amazonaws.com
+    ssh_key: ~/.ssh/kaizen-nige.pem
 
 # Environment variables the app needs
 env_required:
