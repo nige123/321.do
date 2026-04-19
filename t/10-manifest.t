@@ -73,4 +73,46 @@ YAML
     like $err, qr/invalid env key/, 'rejects non-conforming env key';
 };
 
+subtest 'manifest with target blocks' => sub {
+    path($dir, '321.yml')->spew_utf8(<<'YAML');
+name: demo.web
+entry: bin/app.pl
+runner: hypnotoad
+perl: perl-5.42.0
+branch: main
+
+dev:
+    host: demo.do.dev
+    port: 9400
+    runner: morbo
+
+live:
+    ssh: ubuntu@example.com
+    ssh_key: ~/.ssh/key.pem
+    host: demo.do
+    port: 9400
+    runner: hypnotoad
+YAML
+    my $m = Deploy::Manifest->load($dir);
+    is $m->{branch}, 'main', 'branch parsed';
+    is_deeply [sort keys %{ $m->{targets} }], [qw(dev live)], 'both targets present';
+    is $m->{targets}{dev}{host},        'demo.do.dev',        'dev host';
+    is $m->{targets}{dev}{runner},      'morbo',              'dev runner';
+    is $m->{targets}{live}{ssh},        'ubuntu@example.com', 'live ssh';
+    is $m->{targets}{live}{ssh_key},    '~/.ssh/key.pem',     'live ssh_key';
+    is $m->{targets}{live}{host},       'demo.do',            'live host';
+    is $m->{repo}, "$dir", 'repo is set to repo_dir';
+};
+
+subtest 'manifest without targets defaults to empty hash' => sub {
+    path($dir, '321.yml')->spew_utf8(<<'YAML');
+name: bare.web
+entry: bin/bare.pl
+runner: morbo
+YAML
+    my $m = Deploy::Manifest->load($dir);
+    is_deeply $m->{targets}, {}, 'targets defaults to empty hash';
+    is $m->{branch}, 'master', 'branch defaults to master';
+};
+
 done_testing;
