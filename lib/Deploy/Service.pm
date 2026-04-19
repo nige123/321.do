@@ -48,6 +48,15 @@ sub deploy ($self, $name, %opts) {
     my $svc = $self->config->service($name);
     return { status => 'error', message => "Unknown service: $name" } unless $svc;
 
+    # Check repo exists on target
+    my $r = $self->transport->run("test -d $svc->{repo}/.git");
+    unless ($r->{ok}) {
+        return {
+            status  => 'error',
+            message => "Repo not found at $svc->{repo} - run '321 install $name' first",
+        };
+    }
+
     my $skip_git = $opts{skip_git} // 0;
     my @steps;
 
