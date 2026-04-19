@@ -13,6 +13,7 @@ sub run ($self, @args) {
 
     my $svc_mgr = $self->svc_mgr;
     $svc_mgr->transport($transport);
+    $self->config->target($target);
 
     say "3... 2... 1... deploying $name ($target)";
     my $skip_git = ($target eq 'dev') ? 1 : 0;

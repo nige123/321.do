@@ -13,6 +13,7 @@ sub run ($self, @args) {
 
     my $svc_mgr = $self->svc_mgr;
     $svc_mgr->transport($transport);
+    $self->config->target($target);
     my $r = $svc_mgr->update($name);
     for my $step (@{ $r->{data}{steps} // [] }) {
         my $ok = $svc_mgr->_ok($step);
