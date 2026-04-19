@@ -3,8 +3,21 @@ entry: bin/321.pl
 runner: hypnotoad
 perl: perl-5.42.0
 health: /health
+branch: master
+
+dev:
+    host: 321.do.dev
+    port: 9321
+    runner: morbo
+
+live:
+    host: 321.do
+    port: 9321
+    runner: hypnotoad
+
 env_required:
-  MOJO_MODE: "production or development"
+    MOJO_MODE: "production or development"
+
 env_optional:
-  DEPLOY_TOKEN:
-    desc: "Token for remote deploy endpoint"
+    DEPLOY_TOKEN:
+        desc: "Token for remote deploy endpoint"
