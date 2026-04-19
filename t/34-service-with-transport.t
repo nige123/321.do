@@ -7,36 +7,37 @@ use Deploy::Service;
 use Deploy::Local;
 use Mojo::Log;
 
-# Build a minimal fixture: a temp app_home + a git repo with cpanfile
+# Build a minimal fixture: a temp app_home + a git repo with cpanfile.
+# Returns ($home_str, $repo_str, $scan_str, $scan_obj, $home_obj).
+# Caller must hold $scan_obj and $home_obj alive to prevent tempdir cleanup.
 sub make_fixture {
-    my $home = tempdir(CLEANUP => 1);
-    path($home, 'services')->mkpath;
-    path($home, 'secrets')->mkpath;
+    my $home_obj = tempdir(CLEANUP => 1);
+    path($home_obj, 'secrets')->mkpath;
 
-    my $repo = tempdir(CLEANUP => 1);
+    my $scan_obj = tempdir(CLEANUP => 1);
+    my $repo = path($scan_obj, 'web.demo.do');
+    $repo->mkpath;
     system("cd $repo && git init -q && git config user.email t\@t && git config user.name t && git commit --allow-empty -m init -q");
     path($repo, 'cpanfile')->spew_utf8("requires 'perl', '5.010';\n");
 
-    path($home, 'services', 'demo.web.yml')->spew_utf8(<<"YAML");
+    path($repo, '321.yml')->spew_utf8(<<'YAML');
 name: demo.web
-repo: $repo
-branch: master
-bin: bin/app.pl
-targets:
-  live:
-    host: demo.do
-    port: 39400
-    runner: hypnotoad
+entry: bin/app.pl
+runner: hypnotoad
+live:
+  host: demo.do
+  port: 39400
+  runner: hypnotoad
 YAML
 
-    return ($home, $repo);
+    return ("$home_obj", "$repo", "$scan_obj", $scan_obj, $home_obj);
 }
 
 # 1. Service accepts transport attribute (isa Deploy::Local)
 subtest 'Service accepts transport attribute' => sub {
-    my ($home) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     my $svc_mgr = Deploy::Service->new(
-        config    => Deploy::Config->new(app_home => $home, target => 'live'),
+        config    => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log       => Mojo::Log->new(level => 'fatal'),
         transport => Deploy::Local->new,
     );
@@ -45,9 +46,9 @@ subtest 'Service accepts transport attribute' => sub {
 
 # 2. Default transport is Deploy::Local->new
 subtest 'Default transport is Deploy::Local' => sub {
-    my ($home) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     my $svc_mgr = Deploy::Service->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     isa_ok $svc_mgr->transport, 'Deploy::Local', 'default transport is Deploy::Local';
@@ -55,7 +56,7 @@ subtest 'Default transport is Deploy::Local' => sub {
 
 # 3. Deploy uses transport — gets through apt_deps step at minimum
 subtest 'Deploy uses transport - passes apt_deps step' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
 
     # Subclass to stub out expensive steps after apt_deps
     package StubTransportService;
@@ -67,7 +68,7 @@ subtest 'Deploy uses transport - passes apt_deps step' => sub {
     package main;
 
     my $svc_mgr = StubTransportService->new(
-        config    => Deploy::Config->new(app_home => $home, target => 'live'),
+        config    => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log       => Mojo::Log->new(level => 'fatal'),
         transport => Deploy::Local->new,
     );
@@ -85,9 +86,9 @@ subtest 'Deploy uses transport - passes apt_deps step' => sub {
 
 # 4. Status uses transport for git sha — returns valid hex sha
 subtest 'Status uses transport for git sha' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     my $svc_mgr = Deploy::Service->new(
-        config    => Deploy::Config->new(app_home => $home, target => 'live'),
+        config    => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log       => Mojo::Log->new(level => 'fatal'),
         transport => Deploy::Local->new,
     );
@@ -99,9 +100,9 @@ subtest 'Status uses transport for git sha' => sub {
 
 # 5. _run_in_dir delegates to transport and returns hashref
 subtest '_run_in_dir returns hashref from transport' => sub {
-    my ($home) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     my $svc_mgr = Deploy::Service->new(
-        config    => Deploy::Config->new(app_home => $home, target => 'live'),
+        config    => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log       => Mojo::Log->new(level => 'fatal'),
         transport => Deploy::Local->new,
     );
@@ -114,9 +115,9 @@ subtest '_run_in_dir returns hashref from transport' => sub {
 
 # 6. _run_cmd delegates to transport and returns hashref
 subtest '_run_cmd returns hashref from transport' => sub {
-    my ($home) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     my $svc_mgr = Deploy::Service->new(
-        config    => Deploy::Config->new(app_home => $home, target => 'live'),
+        config    => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log       => Mojo::Log->new(level => 'fatal'),
         transport => Deploy::Local->new,
     );

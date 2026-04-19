@@ -5,37 +5,37 @@ use Path::Tiny qw(tempdir path);
 use Deploy::Config;
 use Deploy::Ubic;
 
-my $home = tempdir(CLEANUP => 1);
-path($home, 'services')->mkpath;
-path($home, 'secrets')->mkpath;
+my $home_obj = tempdir(CLEANUP => 1);
+path($home_obj, 'secrets')->mkpath;
+my $scan_obj = tempdir(CLEANUP => 1);
 
-my $repo = tempdir(CLEANUP => 1);
-
-path($home, 'services', 'demo.web.yml')->spew_utf8(<<"YAML");
+my $repo = path($scan_obj, 'web.demo.do');
+$repo->mkpath;
+path($repo, '321.yml')->spew_utf8(<<'YAML');
 name: demo.web
-repo: $repo
-bin: bin/app.pl
-targets:
-  live:
-    host: demo.do
-    port: 9400
-    runner: hypnotoad
+entry: bin/app.pl
+runner: hypnotoad
+live:
+  host: demo.do
+  port: 9400
+  runner: hypnotoad
 YAML
 
-my $cfg = Deploy::Config->new(app_home => $home, target => 'live');
+my $cfg = Deploy::Config->new(app_home => "$home_obj", scan_dir => "$scan_obj", target => 'live');
 
 # Render into a tempdir — we only want the file contents to inspect
 path($repo, 'ubic', 'service', 'demo')->mkpath;
 my $u = Deploy::Ubic->new(config => $cfg);
 $u->generate('demo.web');
 
+my $repo_str = "$repo";
 my $content = path($repo, 'ubic', 'service', 'demo', 'web')->slurp_utf8;
 
-like $content, qr{PERL5LIB=\\'\Q$repo\E/local/lib/perl5\\'},
+like $content, qr{PERL5LIB=\\'\Q$repo_str\E/local/lib/perl5\\'},
     'PERL5LIB points at repo-local lib';
-like $content, qr{PATH=\\'\Q$repo\E/local/bin:},
+like $content, qr{PATH=\\'\Q$repo_str\E/local/bin:},
     'PATH prepends repo-local bin';
-like $content, qr{hypnotoad -f \Q$repo\E/bin/app\.pl},
+like $content, qr{hypnotoad -f \Q$repo_str\E/bin/app\.pl},
     'bin path intact';
 
 # Parse-test: the rendered Perl must actually compile

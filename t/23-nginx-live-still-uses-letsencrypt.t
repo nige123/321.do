@@ -6,21 +6,22 @@ use Deploy::Config;
 use Deploy::Nginx;
 use Deploy::CertProvider;
 
-my $home = tempdir(CLEANUP => 1);
-path($home, 'services')->mkpath;
-my $repo = tempdir(CLEANUP => 1);
+my $home_obj = tempdir(CLEANUP => 1);
+my $scan_obj = tempdir(CLEANUP => 1);
 
-path($home, 'services', 'demo.web.yml')->spew_utf8(<<"YAML");
+my $repo = path($scan_obj, 'web.demo.do');
+$repo->mkpath;
+path($repo, '321.yml')->spew_utf8(<<'YAML');
 name: demo.web
-repo: $repo
-targets:
-  live:
-    host: demo.do
-    port: 9400
+entry: bin/app.pl
+runner: hypnotoad
+live:
+  host: demo.do
+  port: 9400
 YAML
 
 my $sites = tempdir(CLEANUP => 1);
-my $cfg = Deploy::Config->new(app_home => $home, target => 'live');
+my $cfg = Deploy::Config->new(app_home => "$home_obj", scan_dir => "$scan_obj", target => 'live');
 my $n   = Deploy::Nginx->new(
     config          => $cfg,
     sites_available => "$sites",

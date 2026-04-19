@@ -22,36 +22,37 @@ sub _check_port { return 1 }                     # port always up
 package main;
 
 # Fixtures: a repo with a local git history plus a stub cpanfile.
+# Returns ($home_str, $repo_str, $scan_str, $scan_obj, $home_obj)
+# Caller must hold $scan_obj and $home_obj alive to prevent tempdir cleanup.
 sub make_fixture {
-    my $home = tempdir(CLEANUP => 1);
-    path($home, 'services')->mkpath;
-    path($home, 'secrets')->mkpath;
+    my $home_obj = tempdir(CLEANUP => 1);
+    path($home_obj, 'secrets')->mkpath;
 
     my $remote = path(tempdir(CLEANUP => 1), 'demo.git')->stringify;
     system("git init -q --bare $remote");
 
-    my $repo = tempdir(CLEANUP => 1);
+    my $scan_obj = tempdir(CLEANUP => 1);
+    my $repo = path($scan_obj, 'web.demo.do');
+    $repo->mkpath;
     system("cd $repo && git init -q && git config user.email t\@t && git config user.name t && git commit --allow-empty -m init -q && git branch -M master && git remote add origin $remote && git push -q origin master 2>/dev/null");
     path($repo, 'cpanfile')->spew_utf8("requires 'perl', '5.010';\n");
 
-    path($home, 'services', 'demo.web.yml')->spew_utf8(<<"YAML");
+    path($repo, '321.yml')->spew_utf8(<<'YAML');
 name: demo.web
-repo: $repo
-branch: master
-bin: bin/app.pl
-targets:
-  live:
-    host: demo.do
-    port: 39400
-    runner: hypnotoad
+entry: bin/app.pl
+runner: hypnotoad
+live:
+  host: demo.do
+  port: 39400
+  runner: hypnotoad
 YAML
 
-    return ($home, $repo);
+    return ("$home_obj", "$repo", "$scan_obj", $scan_obj, $home_obj);
 }
 
 subtest 'deploy returns the same step sequence as before the refactor' => sub {
-    my ($home, $repo) = make_fixture();
-    my $cfg = Deploy::Config->new(app_home => $home, target => 'live');
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
+    my $cfg = Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live');
 
     # Build the ubic dir structure so generate() works
     path($repo, 'ubic', 'service', 'demo')->mkpath;
@@ -69,13 +70,13 @@ subtest 'deploy returns the same step sequence as before the refactor' => sub {
 };
 
 subtest '_step_migrate: success' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     path($repo, 'bin')->mkpath;
     path($repo, 'bin/migrate')->spew_utf8('#!/bin/sh' . "\n" . 'echo "applying migration 001"' . "\n");
     chmod 0755, "$repo/bin/migrate";
 
     my $svc_mgr = Deploy::Service->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $svc = $svc_mgr->config->service('demo.web');
@@ -87,13 +88,13 @@ subtest '_step_migrate: success' => sub {
 };
 
 subtest '_step_migrate: failure propagates non-zero exit' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     path($repo, 'bin')->mkpath;
     path($repo, 'bin/migrate')->spew_utf8('#!/bin/sh' . "\n" . 'echo boom >&2' . "\n" . 'exit 7' . "\n");
     chmod 0755, "$repo/bin/migrate";
 
     my $svc_mgr = Deploy::Service->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $svc = $svc_mgr->config->service('demo.web');
@@ -104,13 +105,13 @@ subtest '_step_migrate: failure propagates non-zero exit' => sub {
 };
 
 subtest 'deploy runs bin/migrate when present' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     path($repo, 'bin')->mkpath;
     path($repo, 'bin/migrate')->spew_utf8('#!/bin/sh' . "\n" . 'echo migrated' . "\n");
     chmod 0755, "$repo/bin/migrate";
     path($repo, 'ubic', 'service', 'demo')->mkpath;
 
-    my $cfg = Deploy::Config->new(app_home => $home, target => 'live');
+    my $cfg = Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live');
     my $svc_mgr = TestService->new(
         config   => $cfg,
         log      => Mojo::Log->new(level => 'fatal'),
@@ -124,13 +125,13 @@ subtest 'deploy runs bin/migrate when present' => sub {
 };
 
 subtest 'deploy aborts before restart when migrate fails' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     path($repo, 'bin')->mkpath;
     path($repo, 'bin/migrate')->spew_utf8('#!/bin/sh' . "\n" . 'exit 1' . "\n");
     chmod 0755, "$repo/bin/migrate";
 
     my $svc_mgr = TestService->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $r = $svc_mgr->deploy('demo.web', skip_git => 1);
@@ -141,13 +142,13 @@ subtest 'deploy aborts before restart when migrate fails' => sub {
 };
 
 subtest 'update: runs git_pull+cpanm+migrate, no restart' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     path($repo, 'bin')->mkpath;
     path($repo, 'bin/migrate')->spew_utf8('#!/bin/sh' . "\n" . 'echo migrated' . "\n");
     chmod 0755, "$repo/bin/migrate";
 
     my $svc_mgr = TestService->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $r = $svc_mgr->update('demo.web');
@@ -158,12 +159,12 @@ subtest 'update: runs git_pull+cpanm+migrate, no restart' => sub {
 };
 
 subtest 'update: aborts on git_pull failure' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     # Remove the repo's .git dir so git fetch fails
     path($repo, '.git')->remove_tree({safe => 0});
 
     my $svc_mgr = TestService->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $r = $svc_mgr->update('demo.web');
@@ -173,13 +174,13 @@ subtest 'update: aborts on git_pull failure' => sub {
 };
 
 subtest 'migrate: runs only the migrate step' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     path($repo, 'bin')->mkpath;
     path($repo, 'bin/migrate')->spew_utf8('#!/bin/sh' . "\n" . 'echo migrated' . "\n");
     chmod 0755, "$repo/bin/migrate";
 
     my $svc_mgr = Deploy::Service->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $r = $svc_mgr->migrate('demo.web');
@@ -189,9 +190,9 @@ subtest 'migrate: runs only the migrate step' => sub {
 };
 
 subtest 'migrate: missing bin/migrate reports no-op' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     my $svc_mgr = Deploy::Service->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $r = $svc_mgr->migrate('demo.web');
@@ -201,9 +202,9 @@ subtest 'migrate: missing bin/migrate reports no-op' => sub {
 };
 
 subtest 'restart: runs ubic_restart then port_check' => sub {
-    my ($home, $repo) = make_fixture();
+    my ($home, $repo, $scan, $scan_obj, $home_obj) = make_fixture();
     my $svc_mgr = TestService->new(
-        config => Deploy::Config->new(app_home => $home, target => 'live'),
+        config => Deploy::Config->new(app_home => $home, scan_dir => $scan, target => 'live'),
         log    => Mojo::Log->new(level => 'fatal'),
     );
     my $r = $svc_mgr->restart('demo.web');

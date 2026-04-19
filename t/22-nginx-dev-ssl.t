@@ -6,20 +6,22 @@ use Deploy::Config;
 use Deploy::Nginx;
 use Deploy::CertProvider;
 
-my $home = tempdir(CLEANUP => 1);
-path($home, 'services')->mkpath;
-my $repo = tempdir(CLEANUP => 1);
+my $home_obj = tempdir(CLEANUP => 1);
+my $scan_obj = tempdir(CLEANUP => 1);
+my $repo_obj = tempdir(CLEANUP => 1);
 
-path($home, 'services', 'demo.web.yml')->spew_utf8(<<"YAML");
+my $repo = path($scan_obj, 'web.demo.do');
+$repo->mkpath;
+path($repo, '321.yml')->spew_utf8(<<'YAML');
 name: demo.web
-repo: $repo
-targets:
-  dev:
-    host: demo.do.dev
-    port: 9400
-  live:
-    host: demo.do
-    port: 9400
+entry: bin/app.pl
+runner: hypnotoad
+dev:
+  host: demo.do.dev
+  port: 9400
+live:
+  host: demo.do
+  port: 9400
 YAML
 
 # Simulate mkcert-provisioned certs in the ssl_dir
@@ -28,7 +30,7 @@ path($fake_ssl_dir, 'demo.do.dev.pem')->spew_utf8('');
 path($fake_ssl_dir, 'demo.do.dev-key.pem')->spew_utf8('');
 
 my $sites = tempdir(CLEANUP => 1);
-my $cfg = Deploy::Config->new(app_home => $home, target => 'dev');
+my $cfg = Deploy::Config->new(app_home => "$home_obj", scan_dir => "$scan_obj", target => 'dev');
 my $n = Deploy::Nginx->new(
     config          => $cfg,
     sites_available => "$sites",
