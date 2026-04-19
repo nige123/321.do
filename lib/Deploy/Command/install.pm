@@ -69,10 +69,15 @@ sub run ($self, @args) {
         say "  [OK] Cloned $git_url";
     }
 
-    # Check manifest
+    # Check manifest — scaffold if missing
     $r = $transport->run("test -f $repo/321.yml && echo FOUND");
     unless ($r->{output} =~ /FOUND/) {
-        die "  No 321.yml manifest in $repo. Every service repo must ship one.\n";
+        say "  No 321.yml found - creating boilerplate...";
+        $self->_scaffold_manifest($repo, $name, $transport);
+        say "  [OK] Created $repo/321.yml - edit it to match your app, then re-run install";
+        say "";
+        say "  vim $repo/321.yml";
+        return;
     }
     say "  [OK] Manifest found";
 
@@ -132,6 +137,50 @@ sub run ($self, @args) {
 
     say "";
     say "  $name installed on $target.";
+}
+
+sub _scaffold_manifest ($self, $repo, $name, $transport) {
+    my $manifest = <<"YAML";
+# 321.yml — service manifest for $name
+#
+# This file tells 321 how to run your app.
+# Edit the values below, then re-run: 321 install $name
+
+# Service identity (must match services/*.yml)
+name: $name
+
+# Entry point — the script 321 starts via hypnotoad/morbo
+entry: bin/app.pl
+
+# Process runner: hypnotoad (production, zero-downtime) or morbo (dev, auto-reload)
+runner: hypnotoad
+
+# Perl version managed by perlbrew (omit if using system perl)
+# perl: perl-5.42.0
+
+# Health check path — 321 hits this after deploy to verify the app is up
+# health: /health
+
+# Environment variables the app requires to start.
+# Deploy is blocked if any of these are missing from secrets/<name>.env
+# env_required:
+#   DATABASE_URL: "Postgres connection string"
+#   SECRET_KEY: "Session signing key"
+
+# Environment variables with sensible defaults — optional to set
+# env_optional:
+#   LOG_LEVEL:
+#     default: info
+#     desc: "debug | info | warn | error"
+#   MOJO_MODE:
+#     default: production
+YAML
+
+    require Path::Tiny;
+    my $tmp = Path::Tiny::path("/tmp/321-manifest-$$.yml");
+    $tmp->spew_utf8($manifest);
+    $transport->upload("$tmp", "$repo/321.yml");
+    $tmp->remove;
 }
 
 sub _guess_git_url ($self, $repo) {
