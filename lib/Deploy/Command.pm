@@ -42,8 +42,15 @@ sub resolve_service ($self, $input) {
 
     my $msg = "Unknown service: $input\n";
     $msg .= "Known services: " . join(', ', @names) . "\n" if @names;
-    $msg .= "\nTo register a new service, create a 321.yml in its repo:\n";
-    $msg .= "  cd /home/s3/<repo> && 321 install $input\n";
+
+    # If we're in a repo with a 321.yml, hint at the actual service name
+    my $local = $self->_infer_service;
+    if ($local) {
+        $msg .= "\nThis repo's service is '$local'. Did you mean that?\n";
+    } else {
+        $msg .= "\nTo register a new service, create a 321.yml in its repo:\n";
+        $msg .= "  cd /home/s3/<repo> && 321 install $input\n";
+    }
     die $msg;
 }
 
