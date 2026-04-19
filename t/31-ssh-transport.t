@@ -28,7 +28,7 @@ my $ssh = Deploy::SSH->new(
         key  => '/home/bob/.ssh/id_rsa',
     );
     my $cmd = $plain->_ssh_cmd('ls -la');
-    unlike $cmd, qr/perlbrew/,   '_ssh_cmd no perlbrew: no perlbrew in cmd';
+    like   $cmd, qr/perlbrew/,   '_ssh_cmd no perlbrew: still sources bashrc for tools';
     like   $cmd, qr/\bssh\b/,    '_ssh_cmd no perlbrew: still has ssh';
     like   $cmd, qr/ls -la/,     '_ssh_cmd no perlbrew: contains command';
 }

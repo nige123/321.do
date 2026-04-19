@@ -15,11 +15,15 @@ sub _shell_escape ($self, $str) {
     return $str;
 }
 
-# _wrap_perlbrew($cmd) — wrap command with perlbrew source/use when attribute set.
+# _wrap_perlbrew($cmd) — always source perlbrew if available (tools like ubic
+# and cpanm live there), and select a specific version if configured.
 sub _wrap_perlbrew ($self, $cmd) {
     my $pb = $self->perlbrew;
-    return $cmd unless $pb;
-    return "source ~/perl5/perlbrew/etc/bashrc && perlbrew use $pb && $cmd";
+    if ($pb) {
+        return "source ~/perl5/perlbrew/etc/bashrc && perlbrew use $pb && $cmd";
+    }
+    # Even without a specific version, source perlbrew so its tools are on PATH
+    return "test -f ~/perl5/perlbrew/etc/bashrc && source ~/perl5/perlbrew/etc/bashrc; $cmd";
 }
 
 # _ssh_cmd($cmd) — build full ssh command string.
