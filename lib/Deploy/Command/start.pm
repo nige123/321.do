@@ -11,14 +11,25 @@ sub run ($self, @args) {
     my $name = $self->resolve_service($svc_input);
     my $transport = $self->transport_for($name, $target);
     my $r = $transport->run("ubic start $name");
-    if ($r->{ok}) {
-        my $svc  = $self->config->service($name);
-        my $port = $svc->{port} // '?';
-        my $host = $svc->{host} // 'localhost';
-        my $url  = $host ne 'localhost' ? "https://$host/" : "http://localhost:$port/";
-        say "  $name started ($target)  port:$port  $url";
+    say "  $r->{output}" if $r->{output} && $r->{output} =~ /\S/;
+
+    # Verify it's actually running
+    sleep 1;
+    my $check = $transport->run("ubic status $name");
+    my $running = $check->{output} && $check->{output} =~ /running/;
+
+    my $svc  = $self->config->service($name);
+    my $port = $svc->{port} // '?';
+    my $host = $svc->{host} // 'localhost';
+    my $url  = $host ne 'localhost' ? "https://$host/" : "http://localhost:$port/";
+
+    if ($running) {
+        say "  \e[32m$name running\e[0m ($target)  port:$port  $url";
     } else {
-        say "  $name start failed: $r->{output}";
+        say "  \e[31m$name not running\e[0m after start";
+        say "";
+        say "  Next: check logs:";
+        say "    321 logs $name --stderr";
     }
 }
 
