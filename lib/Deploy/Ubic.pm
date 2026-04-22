@@ -29,6 +29,7 @@ sub generate ($self, $name) {
         require File::Temp;
         my ($group, $svc_name) = split /\./, $name, 2;
         my $tmp = File::Temp->new(SUFFIX => "-$group-$svc_name", UNLINK => 0);
+        binmode $tmp, ':utf8';
         print $tmp $content;
         close $tmp;
         chmod 0600, $tmp->filename;
