@@ -22,13 +22,24 @@ sub generate ($self, $name) {
     return { name => $name, status => 'error', message => "Unknown service: $name" } unless $svc;
 
     my $content = $self->_render_service_file($name, $svc);
-    my $home    = $self->_home;
-    my $file    = $self->_ubic_file_path($name);
 
-    # Write locally first (may be uploaded to remote by caller)
-    $file->parent->mkpath;
-    $file->spew_utf8($content);
-    $file->chmod(0600);
+    my $file;
+    if ($self->remote_home) {
+        # Remote target: write to a temp file locally (caller uploads it)
+        require File::Temp;
+        my ($group, $svc_name) = split /\./, $name, 2;
+        my $tmp = File::Temp->new(SUFFIX => "-$group-$svc_name", UNLINK => 0);
+        print $tmp $content;
+        close $tmp;
+        chmod 0600, $tmp->filename;
+        $file = path($tmp->filename);
+    } else {
+        # Local target: write directly to ~/ubic/service/
+        $file = $self->_ubic_file_path($name);
+        $file->parent->mkpath;
+        $file->spew_utf8($content);
+        $file->chmod(0600);
+    }
 
     $self->log->info("Generated ubic service file: $file") if $self->log;
     return { name => $name, status => 'ok', path => "$file" };
