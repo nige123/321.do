@@ -37,14 +37,7 @@ sub run ($self, @args) {
         say "  \e[31m$name not running\e[0m after start";
         say "";
 
-        my @diag = $self->diagnose_stderr($transport, $name, $target);
-        if (@diag) {
-            say "  $diag[0]";
-            say "  Fix: $diag[1]";
-        } else {
-            say "  Next: check logs:";
-            say "    321 logs $name" . $self->target_flag($target) . " --stderr";
-        }
+        $self->print_failure($transport, $name, $target);
     }
 }
 

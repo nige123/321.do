@@ -233,7 +233,7 @@ sub run ($self, @args) {
         # Verify nginx is OK
         my $nginx_ok = 1;
         for my $step (@{ $nginx_result->{steps} // [] }) {
-            my $s = ref $step->{success} ? ${$step->{success}} : $step->{success};
+            my $s = $self->step_ok($step);
             unless ($s) {
                 say "  [FAIL] nginx $step->{step}";
                 $nginx_ok = 0;

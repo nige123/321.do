@@ -15,10 +15,7 @@ sub run ($self, @args) {
     $svc_mgr->transport($transport);
     $self->config->target($target);
     my $r = $svc_mgr->update($name);
-    for my $step (@{ $r->{data}{steps} // [] }) {
-        my $ok = $self->step_ok($step);
-        printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $step->{step};
-    }
+    $self->print_steps($r);
     say "  $r->{message}" if $r->{message};
 }
 

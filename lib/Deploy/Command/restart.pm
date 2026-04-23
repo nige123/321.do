@@ -15,26 +15,14 @@ sub run ($self, @args) {
     $svc_mgr->transport($transport);
     $self->config->target($target);
     my $r = $svc_mgr->restart($name);
-    for my $step (@{ $r->{data}{steps} // [] }) {
-        my $ok = $self->step_ok($step);
-        printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $step->{step};
-    }
+    $self->print_steps($r);
     if ($r->{status} eq 'success') {
         my $svc  = $self->config->service($name);
         my $port = $svc->{port} // '?';
         my $url  = $self->service_url($svc);
         say "  $r->{message}  port:$port  $url";
     } else {
-        say "  $r->{message}" if $r->{message};
-
-        my @diag = $self->diagnose_stderr($transport, $name, $target);
-        if (@diag) {
-            say "  $diag[0]";
-            say "  Fix: $diag[1]";
-        } else {
-            say "  Next: check logs:";
-            say "    321 logs $name" . $self->target_flag($target) . " --stderr";
-        }
+        $self->print_failure($transport, $name, $target, $r->{message});
     }
 }
 

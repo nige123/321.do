@@ -18,10 +18,7 @@ sub run ($self, @args) {
     say "3... 2... 1... deploying $name ($target)";
     my $skip_git = ($target eq 'dev') ? 1 : 0;
     my $r = $svc_mgr->deploy($name, skip_git => $skip_git);
-    for my $step (@{ $r->{data}{steps} // [] }) {
-        my $ok = $self->step_ok($step);
-        printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $step->{step};
-    }
+    $self->print_steps($r);
     say "  $r->{message}" if $r->{message};
 }
 

@@ -27,9 +27,9 @@ sub run ($self, @args) {
         my $port = $svc->{port} // '?';
         my $url  = $self->service_url($svc);
 
-        # Port check — verify process is actually responding
+        # Port check — only when ubic says running (skip extra round-trip for stopped services)
         my $ubic_says_running = $ubic_status =~ /running/;
-        my $port_ok = $self->check_port($port, $transport);
+        my $port_ok = $ubic_says_running ? $self->check_port($port, $transport) : 0;
 
         my $actually_running = $ubic_says_running && $port_ok;
         my $status_text;

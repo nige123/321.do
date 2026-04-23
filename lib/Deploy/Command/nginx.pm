@@ -46,7 +46,7 @@ sub run ($self, @args) {
     # Generate + enable + test + reload
     my $result = $self->nginx->setup($name);
     for my $step (@{ $result->{steps} // [] }) {
-        my $s = ref $step->{success} ? ${$step->{success}} : $step->{success};
+        my $s = $self->step_ok($step);
         printf "  [%s] %s\n", ($s ? 'OK' : 'FAIL'), $step->{step};
         unless ($s) {
             say "";
@@ -74,7 +74,7 @@ sub run ($self, @args) {
                 say "  Next: install mkcert:";
                 say "    sudo apt install -y libnss3-tools mkcert";
                 say "    mkcert -install";
-                say "  Then re-run: 321 nginx $name" . ($target ne 'dev' ? " $target" : "");
+                say "  Then re-run: 321 nginx $name" . $self->target_flag($target);
             } else {
                 say "  [SKIP] certbot failed - DNS may not be pointed yet";
                 say "";

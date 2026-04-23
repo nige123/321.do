@@ -161,16 +161,62 @@ dev:
 YAML
 }
 
-sub run_cmd ($self, $cmd) {
-    system($cmd) == 0 or die "Command failed: $cmd\n";
+sub check_port ($self, $port, $transport) {
+    return 0 unless $port && $port ne '?';
+    my $r = $transport->run(
+        "curl -sf -o /dev/null --connect-timeout 2 http://127.0.0.1:$port/",
+        timeout => 5,
+    );
+    return $r->{ok} ? 1 : 0;
 }
 
-sub run_cpanm ($self, $repo, $perlbrew) {
-    my $cmd = 'cpanm --notest --installdeps .';
-    if ($perlbrew) {
-        $cmd = "bash -lc 'source ~/perl5/perlbrew/etc/bashrc && perlbrew use $perlbrew && $cmd'";
+sub service_url ($self, $svc) {
+    my $host = $svc->{host} // 'localhost';
+    my $port = $svc->{port} // '?';
+    return $host ne 'localhost' ? "https://$host/" : "http://localhost:$port/";
+}
+
+sub target_flag ($self, $target) {
+    return $target ne 'dev' ? " $target" : "";
+}
+
+sub diagnose_stderr ($self, $transport, $name, $target) {
+    my $logs = $transport->run("tail -20 /tmp/$name.stderr.log 2>/dev/null");
+    my $stderr = $logs->{output} // '';
+    my $flag = $self->target_flag($target);
+
+    if ($stderr =~ /Can't locate (\S+\.pm).*you may need to install the (\S+) module/s) {
+        return ("\e[33mMissing module: $2\e[0m", "321 install $name$flag");
     }
-    return system("cd $repo && $cmd 2>&1") == 0;
+    if ($stderr =~ /Can't locate (\S+\.pm)/s) {
+        (my $mod = $1) =~ s/\//::/g; $mod =~ s/\.pm$//;
+        return ("\e[33mMissing module: $mod\e[0m", "321 install $name$flag");
+    }
+    return ();
+}
+
+# Deref ubic step success (scalar ref \1/\0 or plain bool)
+sub step_ok ($self, $step) {
+    return ref $step->{success} ? ${ $step->{success} } : $step->{success};
+}
+
+sub print_steps ($self, $r) {
+    for my $step (@{ $r->{data}{steps} // [] }) {
+        my $ok = $self->step_ok($step);
+        printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $step->{step};
+    }
+}
+
+sub print_failure ($self, $transport, $name, $target, $message) {
+    say "  $message" if $message;
+    my @diag = $self->diagnose_stderr($transport, $name, $target);
+    if (@diag) {
+        say "  $diag[0]";
+        say "  Fix: $diag[1]";
+    } else {
+        say "  Next: check logs:";
+        say "    321 logs $name" . $self->target_flag($target) . " --stderr";
+    }
 }
 
 1;
