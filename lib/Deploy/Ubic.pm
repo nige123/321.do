@@ -46,21 +46,22 @@ sub generate ($self, $name) {
     return { name => $name, status => 'ok', path => "$file" };
 }
 
-sub install_symlinks ($self) {
-    return [];
+sub upload_remote ($self, $transport, $name, $gen) {
+    my ($group, $svc_name) = split /\./, $name, 2;
+    $transport->run("mkdir -p ~/ubic/service/$group");
+    $transport->upload($gen->{path}, "~/ubic/service/$group/$svc_name");
 }
 
-# Detect remote HOME and PERLBREW_ROOT via transport
+# Detect remote HOME and PERLBREW_ROOT via transport (single SSH call)
 sub detect_remote ($self) {
     return unless $self->transport;
-    my $r = $self->transport->run('echo $HOME');
-    $self->remote_home($1) if $r->{ok} && $r->{output} =~ /^(\S+)/;
-
-    $r = $self->transport->run('echo $PERLBREW_ROOT');
-    if ($r->{ok} && $r->{output} =~ /^(\S+)/) {
+    my $r = $self->transport->run('echo HOME=$HOME PERLBREW_ROOT=$PERLBREW_ROOT');
+    if ($r->{ok} && $r->{output} =~ /HOME=(\S+)/) {
+        $self->remote_home($1);
+    }
+    if ($r->{ok} && $r->{output} =~ /PERLBREW_ROOT=(\S+)/) {
         $self->perlbrew_root($1);
     } else {
-        # Default: $HOME/perl5/perlbrew
         $self->perlbrew_root($self->_home . '/perl5/perlbrew');
     }
     return $self;

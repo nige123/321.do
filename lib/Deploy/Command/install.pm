@@ -145,20 +145,16 @@ sub run ($self, @args) {
     my $apt_deps = $svc->{apt_deps} // [];
     if (@$apt_deps) {
         say "  Checking system packages...";
-        my @missing;
-        for my $pkg (@$apt_deps) {
-            my $check = $transport->run("dpkg -s $pkg >/dev/null 2>&1");
-            push @missing, $pkg unless $check->{ok};
-        }
-        if (@missing) {
-            say "  Installing: " . join(', ', @missing);
-            $r = $transport->run("sudo apt-get install -y " . join(' ', @missing), timeout => 300);
+        my $check = $transport->run("dpkg -s " . join(' ', @$apt_deps) . " >/dev/null 2>&1");
+        unless ($check->{ok}) {
+            say "  Installing: " . join(', ', @$apt_deps);
+            $r = $transport->run("sudo apt-get install -y " . join(' ', @$apt_deps), timeout => 300);
             unless ($r->{ok}) {
                 say "  [FAIL] apt install failed";
                 say "  $r->{output}" if $r->{output};
                 say "";
                 say "  Next: install manually:";
-                say "    sudo apt-get install -y " . join(' ', @missing);
+                say "    sudo apt-get install -y " . join(' ', @$apt_deps);
                 say "  Then re-run: 321 install $name $target";
                 return;
             }
@@ -205,10 +201,7 @@ sub run ($self, @args) {
         $ubic->transport($transport);
         $ubic->detect_remote;
         my $gen = $ubic->generate($name);
-        my ($group, $svc_name) = split /\./, $name, 2;
-        $transport->run("mkdir -p ~/ubic/service/$group");
-        $transport->upload($gen->{path}, "~/ubic/service/$group/$svc_name");
-        $transport->run("chmod 600 ~/ubic/service/$group/$svc_name");
+        $ubic->upload_remote($transport, $name, $gen);
     } else {
         $ubic->generate($name);
     }

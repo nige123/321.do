@@ -33,11 +33,7 @@ sub run ($self, @args) {
         my $gen = $ubic->generate($name);
         if ($gen->{status} eq 'ok') {
             if ($is_remote) {
-                # Upload to remote ~/ubic/service/<group>/<name>
-                my ($group, $svc_name) = split /\./, $name, 2;
-                $transport->run("mkdir -p ~/ubic/service/$group");
-                $transport->upload($gen->{path}, "~/ubic/service/$group/$svc_name");
-                $transport->run("chmod 600 ~/ubic/service/$group/$svc_name");
+                $ubic->upload_remote($transport, $name, $gen);
                 say "  $name -> remote";
             } else {
                 say "  $name -> $gen->{path}";

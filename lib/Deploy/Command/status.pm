@@ -25,19 +25,11 @@ sub run ($self, @args) {
         $ubic_status =~ s/^\Q$name\E\s+//;
 
         my $port = $svc->{port} // '?';
-        my $host = $svc->{host} // 'localhost';
-        my $url  = $host ne 'localhost' ? "https://$host/" : "http://localhost:$port/";
+        my $url  = $self->service_url($svc);
 
         # Port check — verify process is actually responding
         my $ubic_says_running = $ubic_status =~ /running/;
-        my $port_ok = 0;
-        if ($port && $port ne '?') {
-            my $check = $transport->run(
-                "curl -sf -o /dev/null --connect-timeout 2 http://127.0.0.1:$port/",
-                timeout => 5,
-            );
-            $port_ok = $check->{ok};
-        }
+        my $port_ok = $self->check_port($port, $transport);
 
         my $actually_running = $ubic_says_running && $port_ok;
         my $status_text;

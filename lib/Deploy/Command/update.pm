@@ -16,7 +16,7 @@ sub run ($self, @args) {
     $self->config->target($target);
     my $r = $svc_mgr->update($name);
     for my $step (@{ $r->{data}{steps} // [] }) {
-        my $ok = $svc_mgr->_ok($step);
+        my $ok = $self->step_ok($step);
         printf "  [%s] %s\n", ($ok ? 'OK' : 'FAIL'), $step->{step};
     }
     say "  $r->{message}" if $r->{message};
