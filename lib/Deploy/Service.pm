@@ -308,10 +308,7 @@ sub _git_sha ($self, $repo) {
 
 sub _check_port ($self, $port) {
     return 0 unless $port;
-    my $r = $self->transport->run(
-        "perl -e 'use IO::Socket::INET; exit(IO::Socket::INET->new(PeerAddr=>q{127.0.0.1},PeerPort=>$port,Timeout=>2)?0:1)'",
-        timeout => 5,
-    );
+    my $r = $self->transport->run("curl -sf -o /dev/null --connect-timeout 2 http://127.0.0.1:$port/", timeout => 5);
     return $r->{ok} ? 1 : 0;
 }
 

@@ -33,7 +33,7 @@ sub run ($self, @args) {
         my $port_ok = 0;
         if ($port && $port ne '?') {
             my $check = $transport->run(
-                "perl -e 'use IO::Socket::INET; exit(IO::Socket::INET->new(PeerAddr=>q{127.0.0.1},PeerPort=>$port,Timeout=>2)?0:1)'",
+                "curl -sf -o /dev/null --connect-timeout 2 http://127.0.0.1:$port/",
                 timeout => 5,
             );
             $port_ok = $check->{ok};
