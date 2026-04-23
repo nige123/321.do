@@ -38,18 +38,26 @@ sub generate ($self, $name) {
 
     my $conf = $self->_render_config($host, $port, $has_ssl, $paths);
 
-    # Write via temp + sudo mv (nginx dirs are root-owned)
-    require File::Temp;
-    my $tmp = File::Temp->new(SUFFIX => '.conf');
-    print $tmp $conf;
-    close $tmp;
+    my $dest = $self->sites_available . "/$host";
 
     if ($self->transport && $self->transport->isa('Deploy::SSH')) {
+        require File::Temp;
+        my $tmp = File::Temp->new(SUFFIX => '.conf');
+        print $tmp $conf;
+        close $tmp;
         $self->transport->upload($tmp->filename, "/tmp/$host.conf");
-        $self->transport->run("sudo mv /tmp/$host.conf /etc/nginx/sites-available/$host");
-    } else {
-        system("sudo mv ${\$tmp->filename} /etc/nginx/sites-available/$host") == 0
+        $self->transport->run("sudo mv /tmp/$host.conf $dest");
+    } elsif ($dest =~ m{^/etc/}) {
+        # System path — needs sudo
+        require File::Temp;
+        my $tmp = File::Temp->new(SUFFIX => '.conf');
+        print $tmp $conf;
+        close $tmp;
+        system("sudo mv ${\$tmp->filename} $dest") == 0
             or return { status => 'error', message => "Failed to write nginx config (sudo needed)" };
+    } else {
+        # Non-system path (tests) — write directly
+        path($dest)->spew_utf8($conf);
     }
 
     my $file = path($self->sites_available, $host);
@@ -71,10 +79,15 @@ sub enable ($self, $name) {
             "sudo ln -sf /etc/nginx/sites-available/$host /etc/nginx/sites-enabled/$host"
         );
         return { status => 'error', message => "Symlink failed: $r->{output}" } unless $r->{ok};
+    } elsif ("$link" =~ m{^/etc/}) {
+        return { status => 'error', message => "Config not found: $source" } unless $source->exists;
+        system("sudo ln -sf $source $link") == 0
+            or return { status => 'error', message => "Symlink failed (sudo needed)" };
     } else {
         return { status => 'error', message => "Config not found: $source" } unless $source->exists;
-        system("sudo ln -sf /etc/nginx/sites-available/$host /etc/nginx/sites-enabled/$host") == 0
-            or return { status => 'error', message => "Symlink failed (sudo needed)" };
+        unlink $link if -l $link;
+        symlink($source->absolute, $link)
+            or return { status => 'error', message => "Symlink failed: $!" };
     }
 
     $self->log->info("Enabled nginx site: $host") if $self->log;
