@@ -38,16 +38,18 @@ sub generate ($self, $name) {
 
     my $conf = $self->_render_config($host, $port, $has_ssl, $paths);
 
+    # Write via temp + sudo mv (nginx dirs are root-owned)
+    require File::Temp;
+    my $tmp = File::Temp->new(SUFFIX => '.conf');
+    print $tmp $conf;
+    close $tmp;
+
     if ($self->transport && $self->transport->isa('Deploy::SSH')) {
-        require File::Temp;
-        my $tmp = File::Temp->new(SUFFIX => '.conf');
-        print $tmp $conf;
-        close $tmp;
         $self->transport->upload($tmp->filename, "/tmp/$host.conf");
         $self->transport->run("sudo mv /tmp/$host.conf /etc/nginx/sites-available/$host");
     } else {
-        my $file = path($self->sites_available, $host);
-        $file->spew_utf8($conf);
+        system("sudo mv ${\$tmp->filename} /etc/nginx/sites-available/$host") == 0
+            or return { status => 'error', message => "Failed to write nginx config (sudo needed)" };
     }
 
     my $file = path($self->sites_available, $host);
@@ -71,9 +73,8 @@ sub enable ($self, $name) {
         return { status => 'error', message => "Symlink failed: $r->{output}" } unless $r->{ok};
     } else {
         return { status => 'error', message => "Config not found: $source" } unless $source->exists;
-        unlink $link if -l $link;
-        symlink($source->absolute, $link)
-            or return { status => 'error', message => "Symlink failed: $!" };
+        system("sudo ln -sf /etc/nginx/sites-available/$host /etc/nginx/sites-enabled/$host") == 0
+            or return { status => 'error', message => "Symlink failed (sudo needed)" };
     }
 
     $self->log->info("Enabled nginx site: $host") if $self->log;
@@ -85,7 +86,7 @@ sub test ($self) {
         my $r = $self->transport->run('sudo nginx -t');
         return { ok => $r->{ok}, output => $r->{output} };
     }
-    my $output = `nginx -t 2>&1`;
+    my $output = `sudo nginx -t 2>&1`;
     return { ok => ($? == 0), output => $output };
 }
 
@@ -97,7 +98,7 @@ sub reload ($self) {
         my $r = $self->transport->run('sudo systemctl reload nginx');
         return { status => $r->{ok} ? 'ok' : 'error', output => $r->{output} };
     }
-    my $output = `systemctl reload nginx 2>&1`;
+    my $output = `sudo systemctl reload nginx 2>&1`;
     my $ok = $? == 0;
     $self->log->info("Nginx reloaded") if $self->log && $ok;
     return { status => ($ok ? 'ok' : 'error'), output => $output };
