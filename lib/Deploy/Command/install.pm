@@ -137,8 +137,33 @@ sub run ($self, @args) {
     }
     say "  [OK] manifest";
 
-    # --- Dependencies ---
-    say "  Installing dependencies...";
+    # --- System packages ---
+    my $apt_deps = $svc->{apt_deps} // [];
+    if (@$apt_deps) {
+        say "  Checking system packages...";
+        my @missing;
+        for my $pkg (@$apt_deps) {
+            my $check = $transport->run("dpkg -s $pkg >/dev/null 2>&1");
+            push @missing, $pkg unless $check->{ok};
+        }
+        if (@missing) {
+            say "  Installing: " . join(', ', @missing);
+            $r = $transport->run("sudo apt-get install -y " . join(' ', @missing), timeout => 300);
+            unless ($r->{ok}) {
+                say "  [FAIL] apt install failed";
+                say "  $r->{output}" if $r->{output};
+                say "";
+                say "  Next: install manually:";
+                say "    sudo apt-get install -y " . join(' ', @missing);
+                say "  Then re-run: 321 install $name $target";
+                return;
+            }
+        }
+        say "  [OK] apt deps";
+    }
+
+    # --- Perl dependencies ---
+    say "  Installing Perl dependencies...";
     $r = $transport->run_in_dir($repo, 'cpanm -L local --notest --installdeps .', timeout => 600);
     # Verify local/ was created
     my $check = $transport->run("test -d $repo/local && echo OK");
