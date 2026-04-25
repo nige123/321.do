@@ -7,17 +7,29 @@ has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
     my ($svc_input, $target) = $self->parse_target(@args);
+
+    if ($target eq 'all') {
+        for my $t (@{ $self->all_target_names }) {
+            say "\e[1m$t\e[0m";
+            $self->_show_status($svc_input, $t);
+            say "";
+        }
+    } else {
+        $self->_show_status($svc_input, $target);
+    }
+}
+
+sub _show_status ($self, $svc_input, $target) {
     $self->config->target($target);
 
     my @names = $svc_input
-        ? ($self->resolve_service($svc_input))   # list context: returns all matches
+        ? ($self->resolve_service($svc_input))
         : @{ $self->config->service_names };
 
     for my $name (@names) {
         my $svc = $self->config->service($name);
         my $transport = $self->transport_for($name, $target);
 
-        # Ubic status
         my $r = $transport->run("ubic status $name");
         my $ubic_status = $r->{output} // '';
         chomp $ubic_status;
@@ -27,7 +39,6 @@ sub run ($self, @args) {
         my $port = $svc->{port} // '?';
         my $url  = $self->service_url($svc);
 
-        # Port check — only when ubic says running (skip extra round-trip for stopped services)
         my $ubic_says_running = $ubic_status =~ /running/;
         my $port_ok = $ubic_says_running ? $self->check_port($port, $transport) : 0;
 
@@ -41,14 +52,14 @@ sub run ($self, @args) {
             $status_text = "\e[31m$ubic_status\e[0m";
         }
 
-        printf "%-15s  %s  port:%-5s  %s\n", $name, $status_text, $port, $url;
+        printf "  %-15s  %s  port:%-5s  %s\n", $name, $status_text, $port, $url;
 
         if ($ubic_says_running && !$port_ok) {
             my $flag = $self->target_flag($target);
-            say "               \e[33m^\e[0m process alive but not serving - try: 321 restart $name$flag";
+            say "                 \e[33m^\e[0m process alive but not serving - try: 321 restart $name$flag";
         } elsif (!$ubic_says_running && $ubic_status =~ /off|not running/) {
             my $flag = $self->target_flag($target);
-            say "               \e[31m^\e[0m start with: 321 start $name$flag";
+            say "                 \e[31m^\e[0m start with: 321 start $name$flag";
         }
     }
 }
@@ -59,7 +70,9 @@ sub run ($self, @args) {
 
   Usage: APPLICATION status [service]
 
-  321 status            # all services
+  321 status            # all services (dev)
+  321 status live       # all services (live)
+  321 status all        # all services, all targets
   321 status zorda.web  # single service
 
 =cut

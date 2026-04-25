@@ -86,11 +86,21 @@ sub _infer_service ($self) {
 }
 
 sub _is_target_name ($self, $name) {
+    return 1 if $name eq 'all';
     for my $svc_name (@{ $self->config->service_names }) {
         my $raw = $self->config->service_raw($svc_name);
         return 1 if exists $raw->{targets}{$name};
     }
     return 0;
+}
+
+sub all_target_names ($self) {
+    my %seen;
+    for my $svc_name (@{ $self->config->service_names }) {
+        my $raw = $self->config->service_raw($svc_name);
+        $seen{$_}++ for keys %{ $raw->{targets} // {} };
+    }
+    return [ sort keys %seen ];
 }
 
 sub transport_for ($self, $name, $target) {
