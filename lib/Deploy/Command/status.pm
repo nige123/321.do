@@ -10,7 +10,7 @@ sub run ($self, @args) {
     $self->config->target($target);
 
     my @names = $svc_input
-        ? ($self->resolve_service($svc_input))
+        ? ($self->resolve_service($svc_input))   # list context: returns all matches
         : @{ $self->config->service_names };
 
     for my $name (@names) {

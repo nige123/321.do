@@ -20,6 +20,8 @@ sub resolve_service ($self, $input) {
     @m = grep { index(lc $_, lc $input) >= 0 } @names;
     return $m[0] if @m == 1;
 
+    return @m if @m > 1 && wantarray;
+
     if (@m > 1) {
         die "Ambiguous: '$input' matches: " . join(', ', @m) . "\n";
     }
