@@ -66,6 +66,9 @@ perl: perl-5.42.0
 # Git branch to deploy from (default: master)
 branch: $branch
 
+# Test command - run before deploying to live (321 test <service>)
+test: prove -lr t
+
 # System packages needed before cpanm (installed via sudo apt-get)
 # apt_deps:
 #   - libexpat1-dev

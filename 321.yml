@@ -11,6 +11,7 @@ runner: hypnotoad              # hypnotoad | morbo | script
 perl: perl-5.42.0              # perlbrew version
 health: /health                # health check path (GET, must return 200)
 branch: master                 # git branch to deploy from
+test: prove -lr t              # run before deploying to live
 
 # Favicon shown on the 321 dashboard (optional)
 # favicon: https://321.do/favicon.ico

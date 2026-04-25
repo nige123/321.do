@@ -86,6 +86,7 @@ sub _resolve ($self, $name, $manifest) {
             stderr => "/tmp/$name.stderr.log",
             ubic   => "/tmp/$name.ubic.log",
         },
+        ($manifest->{test}     ? (test     => $manifest->{test})     : ()),
         ($manifest->{favicon}  ? (favicon  => $manifest->{favicon})  : ()),
         ($target->{ssh}        ? (ssh      => $target->{ssh})        : ()),
         ($target->{ssh_key}    ? (ssh_key  => $target->{ssh_key})    : ()),
