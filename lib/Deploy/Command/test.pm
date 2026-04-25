@@ -33,9 +33,7 @@ sub _test_one ($self, $name, $target) {
     say "";
 
     my $transport = $self->transport_for($name, $target);
-    my $r = $transport->run_in_dir($svc->{repo}, $test_cmd, timeout => 300);
-
-    print $r->{output} if $r->{output};
+    my $r = $transport->stream("cd $svc->{repo} && $test_cmd");
 
     if ($r->{ok}) {
         say "";
