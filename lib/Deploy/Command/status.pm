@@ -36,25 +36,33 @@ sub _show_status ($self, $svc_input, $target) {
         $ubic_status =~ s/^.*?\t//;
         $ubic_status =~ s/^\Q$name\E\s+//;
 
-        my $port = $svc->{port} // '?';
+        my $is_worker = $svc->{is_worker};
+        my $port = $svc->{port};
         my $url  = $self->service_url($svc);
 
         my $ubic_says_running = $ubic_status =~ /running/;
-        my $port_ok = $ubic_says_running ? $self->check_port($port, $transport) : 0;
 
-        my $actually_running = $ubic_says_running && $port_ok;
+        # Workers have no port — ubic status alone determines health
+        my $port_ok = (!$is_worker && $ubic_says_running && $port)
+            ? $self->check_port($port, $transport) : undef;
+
+        my $actually_running = $ubic_says_running && ($is_worker || $port_ok);
         my $status_text;
         if ($actually_running) {
             $status_text = "\e[32m$ubic_status\e[0m";
-        } elsif ($ubic_says_running && !$port_ok) {
+        } elsif ($ubic_says_running && defined $port_ok && !$port_ok) {
             $status_text = "\e[33m$ubic_status (port $port not responding)\e[0m";
         } else {
             $status_text = "\e[31m$ubic_status\e[0m";
         }
 
-        printf "  %-15s  %s  port:%-5s  %s\n", $name, $status_text, $port, $url;
+        if ($is_worker) {
+            printf "  %-15s  %s  (worker)\n", $name, $status_text;
+        } else {
+            printf "  %-15s  %s  port:%-5s  %s\n", $name, $status_text, $port // '?', $url;
+        }
 
-        if ($ubic_says_running && !$port_ok) {
+        if (!$is_worker && $ubic_says_running && defined $port_ok && !$port_ok) {
             my $flag = $self->target_flag($target);
             say "                 \e[33m^\e[0m process alive but not serving - try: 321 restart $name$flag";
         } elsif (!$ubic_says_running && $ubic_status =~ /off|not running/) {

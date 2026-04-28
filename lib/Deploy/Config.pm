@@ -53,13 +53,18 @@ sub _load_all ($self) {
             my $w = $workers->{$worker_name};
             my $full_name = "$group.$worker_name";
             $services{$full_name} = {
-                %$manifest,
-                name    => $full_name,
-                entry   => $w->{cmd},
-                runner  => 'script',
-                health  => undef,
-                workers => {},          # don't recurse
-                _parent => $manifest->{name},
+                name         => $full_name,
+                entry        => $w->{cmd},
+                runner       => 'script',
+                health       => undef,
+                repo         => $manifest->{repo},
+                perl         => $manifest->{perl},
+                branch       => $manifest->{branch},
+                targets      => $manifest->{targets},
+                env_required => $manifest->{env_required},
+                env_optional => $manifest->{env_optional},
+                apt_deps     => $manifest->{apt_deps},
+                _parent      => $manifest->{name},
             };
         }
     }
@@ -83,7 +88,7 @@ sub _resolve ($self, $name, $manifest) {
     my $target_name = $self->target;
     my $target = $manifest->{targets}{$target_name} // {};
 
-    my $is_worker = $manifest->{runner} eq 'script';
+    my $is_worker = exists $manifest->{_parent};
     my $runner = $is_worker ? 'script' : ($target->{runner} // $manifest->{runner} // 'hypnotoad');
 
     return {
@@ -104,6 +109,7 @@ sub _resolve ($self, $name, $manifest) {
             stderr => "/tmp/$name.stderr.log",
             ubic   => "/tmp/$name.ubic.log",
         },
+        ($is_worker            ? (is_worker => 1)                    : ()),
         ($manifest->{test}     ? (test     => $manifest->{test})     : ()),
         ($manifest->{favicon}  ? (favicon  => $manifest->{favicon})  : ()),
         ($target->{ssh}        ? (ssh      => $target->{ssh})        : ()),
