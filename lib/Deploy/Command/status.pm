@@ -1,6 +1,7 @@
 package Deploy::Command::status;
 
 use Mojo::Base 'Deploy::Command', -signatures;
+use Deploy::Ubic;
 
 has description => 'Show service status';
 has usage => sub ($self) { $self->extract_usage };
@@ -26,23 +27,27 @@ sub _show_status ($self, $svc_input, $target) {
         ? ($self->resolve_service($svc_input))
         : @{ $self->config->service_names };
 
+    # Batch `ubic status` per transport endpoint — one fork covers all services
+    # on the same host, then we look up each by name.
+    my %status_cache;
     for my $name (@names) {
         my $svc = $self->config->service($name);
         my $transport = $self->transport_for($name, $target);
+        my $key = $svc->{ssh} // 'local';
 
-        my $r = $transport->run("ubic status $name");
-        my $ubic_status = $r->{output} // '';
-        chomp $ubic_status;
-        $ubic_status =~ s/^.*?\t//;
-        $ubic_status =~ s/^\Q$name\E\s+//;
+        unless (exists $status_cache{$key}) {
+            # ubic status exits non-zero when any service is off; parse anyway.
+            my $r = $transport->run("ubic status");
+            $status_cache{$key} = Deploy::Ubic->parse_status_output($r->{output});
+        }
+        my $info = $status_cache{$key}{$name} // {};
+        my $ubic_status = $info->{raw} // 'unknown';
+        my $ubic_says_running = defined $info->{pid};
 
         my $is_worker = $svc->{is_worker};
         my $port = $svc->{port};
         my $url  = $self->service_url($svc);
 
-        my $ubic_says_running = $ubic_status =~ /running/;
-
-        # Workers have no port — ubic status alone determines health
         my $port_ok = (!$is_worker && $ubic_says_running && $port)
             ? $self->check_port($port, $transport) : undef;
 

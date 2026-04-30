@@ -171,8 +171,10 @@ YAML
 
 sub check_port ($self, $port, $transport) {
     return 0 unless $port && $port ne '?';
+    # Any HTTP response means the socket is alive; -f would falsely fail
+    # apps that 404 on / (e.g. those that only serve under /v3/).
     my $r = $transport->run(
-        "curl -sf -o /dev/null --connect-timeout 2 http://127.0.0.1:$port/",
+        "curl -s -o /dev/null --connect-timeout 2 http://127.0.0.1:$port/",
         timeout => 5,
     );
     return $r->{ok} ? 1 : 0;

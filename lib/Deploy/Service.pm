@@ -5,6 +5,7 @@ use Mojo::IOLoop;
 use Path::Tiny qw(path);
 use POSIX qw(strftime);
 use Deploy::Local;
+use Deploy::Ubic;
 
 has 'config';     # Deploy::Config instance
 has 'log';        # Mojo::Log instance
@@ -16,68 +17,52 @@ sub status ($self, $name) {
     return undef unless $svc;
 
     my $pid = $self->_get_pid($name, $svc);
-    my $git_sha = $self->_git_sha($svc->{repo});
-    # Only check port if ubic says it's running — avoids 2s curl timeout per stopped service
+    my $git_sha = $self->_git_sha($svc->{repo}, $svc->{branch});
+    # skip port check for stopped services — avoids 2s curl timeout each
     my $port_ok = $pid ? $self->_check_port($svc->{port}) : 0;
 
-    return {
-        name    => $name,
-        pid     => $pid,
-        port    => $svc->{port},
-        running => $port_ok ? \1 : \0,
-        git_sha => $git_sha,
-        repo    => $svc->{repo},
-        branch  => $svc->{branch},
-        mode    => $svc->{mode} // 'production',
-        runner  => $svc->{runner} // 'hypnotoad',
-        host    => $svc->{host} // 'localhost',
-        ($svc->{favicon} ? (favicon => $svc->{favicon}) : ()),
-        ($svc->{docs}    ? (docs    => $svc->{docs})    : ()),
-        ($svc->{admin}   ? (admin   => $svc->{admin})   : ()),
-    };
+    return $self->_status_hash($name, $svc, $pid, $git_sha, $port_ok);
 }
 
 sub all_status ($self) {
-    # Batch ubic status in one call — avoids N subprocess calls
-    my %ubic_pids;
+    # one batched `ubic status` instead of one fork per service.
+    # ubic exits non-zero when any service is off, so we parse output
+    # regardless of $r->{ok}.
     my $r = $self->transport->run("ubic status");
-    if ($r->{ok}) {
-        for my $line (split /\n/, $r->{output} // '') {
-            if ($line =~ /^\s+(\S+)\t(?:running \(pid (\d+)\)|(.+))/) {
-                $ubic_pids{$1} = $2;  # undef if not running
-            }
-        }
-    }
+    my $statuses = Deploy::Ubic->parse_status_output($r->{output});
 
     my @results;
     for my $name (@{ $self->config->service_names }) {
         my $svc = $self->config->service($name);
         next unless $svc;
 
-        my $pid = $ubic_pids{$name};
-        # Fast git sha: read .git/refs/heads directly instead of spawning git
-        my $git_sha = $self->_git_sha_fast($svc->{repo}, $svc->{branch});
-        # Trust ubic pid as running indicator — port check is too slow for dashboard
+        my $pid = $statuses->{$name}{pid};
+        my $git_sha = $self->_git_sha($svc->{repo}, $svc->{branch});
+        # port check skipped here — too slow for dashboard hot path
         my $running = $pid ? 1 : 0;
 
-        push @results, {
-            name    => $name,
-            pid     => $pid,
-            port    => $svc->{port},
-            running => $running ? \1 : \0,
-            git_sha => $git_sha,
-            repo    => $svc->{repo},
-            branch  => $svc->{branch},
-            mode    => $svc->{mode} // 'production',
-            runner  => $svc->{runner} // 'hypnotoad',
-            host    => $svc->{host} // 'localhost',
-            ($svc->{is_worker} ? (is_worker => 1) : ()),
-            ($svc->{favicon}   ? (favicon   => $svc->{favicon}) : ()),
-            ($svc->{docs}      ? (docs      => $svc->{docs})    : ()),
-            ($svc->{admin}     ? (admin     => $svc->{admin})   : ()),
-        };
+        push @results, $self->_status_hash($name, $svc, $pid, $git_sha, $running);
     }
     return \@results;
+}
+
+sub _status_hash ($self, $name, $svc, $pid, $git_sha, $running) {
+    return {
+        name    => $name,
+        pid     => $pid,
+        port    => $svc->{port},
+        running => $running ? \1 : \0,
+        git_sha => $git_sha,
+        repo    => $svc->{repo},
+        branch  => $svc->{branch},
+        mode    => $svc->{mode} // 'production',
+        runner  => $svc->{runner} // 'hypnotoad',
+        host    => $svc->{host} // 'localhost',
+        ($svc->{is_worker} ? (is_worker => 1)                : ()),
+        ($svc->{favicon}   ? (favicon   => $svc->{favicon})  : ()),
+        ($svc->{docs}      ? (docs      => $svc->{docs})     : ()),
+        ($svc->{admin}     ? (admin     => $svc->{admin})    : ()),
+    };
 }
 
 sub deploy ($self, $name, %opts) {
@@ -121,7 +106,17 @@ sub deploy ($self, $name, %opts) {
     }
 
     if ($self->ubic_mgr) {
+        # For SSH targets, generate writes to a temp file locally; we then
+        # upload it to the remote ~/ubic/service/<group>/<name>. Without this
+        # step, changes to perl version, env, or runner in 321.yml would
+        # never reach the live ubic wrapper.
+        my $is_remote = $self->transport->isa('Deploy::SSH');
+        if ($is_remote) {
+            $self->ubic_mgr->transport($self->transport);
+            $self->ubic_mgr->detect_remote;
+        }
         my $gen = $self->ubic_mgr->generate($name);
+        $self->ubic_mgr->upload_remote($self->transport, $name, $gen) if $is_remote;
         push @steps, { step => 'generate_ubic', success => \1, output => "Generated: $gen->{path}" };
     }
 
@@ -319,11 +314,12 @@ sub _run_cmd ($self, $cmd) {
 
 sub _get_pid ($self, $name, $svc) {
     my $r = $self->transport->run("ubic status $name");
-    if ($r->{ok} && $r->{output} =~ /running \(pid (\d+)\)/) {
-        return $1;
+    if ($r->{ok}) {
+        my $statuses = Deploy::Ubic->parse_status_output($r->{output});
+        return $statuses->{$name}{pid} if defined $statuses->{$name}{pid};
     }
 
-    # Fallback: check hypnotoad.pid (may be in bin/ or repo root)
+    # Fallback: hypnotoad.pid may live in bin/ or repo root
     for my $loc ('bin/hypnotoad.pid', 'hypnotoad.pid') {
         my $pidfile = path($svc->{repo}, $loc);
         next unless $pidfile->exists;
@@ -335,27 +331,49 @@ sub _get_pid ($self, $name, $svc) {
     return undef;
 }
 
-sub _git_sha ($self, $repo) {
+sub _git_sha ($self, $repo, $branch = undef) {
+    if (defined(my $sha = $self->_git_sha_from_disk($repo, $branch))) {
+        return $sha;
+    }
+    # Fallback for packed refs we can't parse, remote repos, or detached states
     my $r = $self->transport->run_in_dir($repo, 'git rev-parse --short HEAD');
     return undef unless $r->{ok};
     chomp(my $sha = $r->{output});
     return $sha || undef;
 }
 
-# Fast git sha: read .git/HEAD directly, no subprocess
-sub _git_sha_fast ($self, $repo, $branch) {
-    $branch //= 'master';
+sub _git_sha_from_disk ($self, $repo, $branch) {
+    if (!$branch) {
+        my $head_file = path($repo, '.git', 'HEAD');
+        return undef unless $head_file->exists;
+        my $head = $head_file->slurp;
+        return substr($1, 0, 7) if $head =~ /^([0-9a-f]{7,})/;
+        return undef unless $head =~ m{^ref: refs/heads/(\S+)};
+        $branch = $1;
+    }
+
     my $ref_file = path($repo, '.git', 'refs', 'heads', $branch);
-    return undef unless $ref_file->exists;
-    my $sha = $ref_file->slurp;
-    $sha =~ s/\s+//g;
-    return substr($sha, 0, 7) if length($sha) >= 7;
+    if ($ref_file->exists) {
+        my $sha = $ref_file->slurp;
+        $sha =~ s/\s+//g;
+        return substr($sha, 0, 7) if length($sha) >= 7;
+    }
+
+    # git gc compacts loose refs into .git/packed-refs
+    my $packed = path($repo, '.git', 'packed-refs');
+    if ($packed->exists) {
+        for my $line (split /\n/, $packed->slurp) {
+            return substr($1, 0, 7) if $line =~ m{^([0-9a-f]+)\s+refs/heads/\Q$branch\E$};
+        }
+    }
     return undef;
 }
 
 sub _check_port ($self, $port) {
     return 0 unless $port;
-    my $r = $self->transport->run("curl -sf -o /dev/null --connect-timeout 1 http://127.0.0.1:$port/", timeout => 3);
+    # Drop -f: any HTTP response (200/404/500) means the socket is alive.
+    # Apps that only serve under /v3 etc. would 404 on / and falsely fail -f.
+    my $r = $self->transport->run("curl -s -o /dev/null --connect-timeout 1 http://127.0.0.1:$port/", timeout => 3);
     return $r->{ok} ? 1 : 0;
 }
 

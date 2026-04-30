@@ -6,6 +6,9 @@ has description => 'Check or set up nginx + SSL for a service';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
+    my $force = 0;
+    @args = grep { $_ eq '--force' ? do { $force = 1; 0 } : 1 } @args;
+
     my ($svc_input, $target) = $self->parse_target(@args);
     die $self->usage unless $svc_input;
     my $name = $self->resolve_service($svc_input);
@@ -21,10 +24,8 @@ sub run ($self, @args) {
         return;
     }
 
-    # Set transport on nginx manager
     $self->nginx->transport($transport);
 
-    # Show current status
     my $status = $self->nginx->status($name);
     say "  $name ($target)";
     say "  host:    $host";
@@ -33,15 +34,14 @@ sub run ($self, @args) {
     say "  enabled: " . ($status->{enabled} ? "\e[32myes\e[0m" : "\e[31mno\e[0m");
     say "  ssl:     " . ($status->{ssl} ? "\e[32m$status->{provider}\e[0m" : "\e[31mnone\e[0m");
 
-    # If everything is set up, we're done
-    if ($status->{config_exists} && $status->{enabled} && $status->{ssl}) {
+    if (!$force && $status->{config_exists} && $status->{enabled} && $status->{ssl}) {
         say "";
-        say "  \e[32mNginx fully configured.\e[0m";
+        say "  \e[32mNginx fully configured.\e[0m  (use --force to regenerate)";
         return;
     }
 
     say "";
-    say "  Setting up...";
+    say $force ? "  Regenerating..." : "  Setting up...";
 
     # Generate + enable + test + reload
     my $result = $self->nginx->setup($name);
@@ -89,11 +89,12 @@ sub run ($self, @args) {
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION nginx <service> [target]
+  Usage: APPLICATION nginx <service> [target] [--force]
 
   Check and set up nginx + SSL for a service.
 
-  321 nginx 123.api         # check/setup locally (mkcert)
-  321 nginx 123.api live    # check/setup on production (certbot)
+  321 nginx 123.api               # check/setup locally (mkcert)
+  321 nginx 123.api live          # check/setup on production (certbot)
+  321 nginx zorda.api live --force  # regenerate even if already configured
 
 =cut

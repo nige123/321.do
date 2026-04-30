@@ -2,8 +2,9 @@ package Deploy::Command::go;
 
 use Mojo::Base 'Deploy::Command', -signatures;
 use Deploy::Local;
+use Deploy::Command::install;
 
-has description => 'Deploy a service: git pull, cpanm, ubic restart';
+has description => 'Deploy a service: install if new, otherwise hot-restart';
 has usage => sub ($self) { $self->extract_usage };
 
 sub run ($self, @args) {
@@ -31,6 +32,22 @@ sub run ($self, @args) {
     }
 
     my $transport = $self->transport_for($name, $target);
+
+    # First-time bring-up vs hot-restart: install if the repo OR the ubic
+    # service file is missing. A partial install (repo cloned but ubic file
+    # gone) re-triggers install rather than failing in deploy.
+    my ($group, $svc_short) = split /\./, $name, 2;
+    my $check = $transport->run(
+        "test -d $svc->{repo}/.git && test -e ~/ubic/service/$group/$svc_short && echo OK"
+    );
+    my $needs_install = ($check->{output} // '') !~ /OK/;
+
+    if ($needs_install) {
+        my $install = Deploy::Command::install->new(app => $self->app);
+        $install->run($name, $target);
+        return;
+    }
+
     my $svc_mgr = $self->svc_mgr;
     $svc_mgr->transport($transport);
 
@@ -45,8 +62,13 @@ sub run ($self, @args) {
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION go <service>
+  Usage: APPLICATION go [service] [target]
 
-  321 go zorda.web   # deploy latest code
+  First run on a target installs (clone, deps, ubic, nginx, SSL, start).
+  Later runs hot-restart via hypnotoad (git pull, cpanm, ubic restart).
+
+  321 go              # deploy current repo to dev
+  321 go live         # deploy current repo to live
+  321 go zorda.web    # deploy zorda.web to dev
 
 =cut

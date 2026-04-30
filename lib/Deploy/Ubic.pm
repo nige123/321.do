@@ -143,20 +143,30 @@ sub _build_bin_cmd ($self, $name, $svc) {
     }
 
     # Source secrets from env file at runtime (never baked into the ubic file)
-    # Use app_home for local, or the remote app_home path for remote
     my $secrets_path = "$app_home/secrets/$name.env";
     my $source_secrets = "test -f $secrets_path && { set -a && . $secrets_path && set +a; }; ";
 
-    if ($runner eq 'script') {
-        return "bash -c '${source_secrets}perlbrew exec --with $perlbrew ${env_str}perl $bin'";
-    }
+    # hypnotoad -f keeps the process foreground; ubic SimpleDaemon requires that
+    my %tail = (
+        script    => "perl $bin",
+        morbo     => "morbo -l http://127.0.0.1:$port $bin",
+        hypnotoad => "hypnotoad -f $bin",
+    );
+    my $cmd = $tail{$runner} // $tail{hypnotoad};
+    return "bash -c '${source_secrets}perlbrew exec --with $perlbrew ${env_str}$cmd'";
+}
 
-    if ($runner eq 'morbo') {
-        return "bash -c '${source_secrets}perlbrew exec --with $perlbrew ${env_str}morbo -l http://127.0.0.1:$port $bin'";
+# Parse `ubic status` output into { name => { pid, raw } }.
+# Centralised so callers don't reinvent the regex.
+sub parse_status_output ($class, $text) {
+    my %statuses;
+    for my $line (split /\n/, $text // '') {
+        next unless $line =~ /^\s+(\S+)\t+(.+)/;
+        my ($name, $raw) = ($1, $2);
+        my $pid = $raw =~ /running \(pid (\d+)\)/ ? $1 : undef;
+        $statuses{$name} = { pid => $pid, raw => $raw };
     }
-
-    # hypnotoad -f — foreground, required by ubic SimpleDaemon
-    return "bash -c '${source_secrets}perlbrew exec --with $perlbrew ${env_str}hypnotoad -f $bin'";
+    return \%statuses;
 }
 
 sub _shell_quote ($val) {

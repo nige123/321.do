@@ -46,25 +46,20 @@ sub _load_all ($self) {
         next unless $manifest;
         $services{ $manifest->{name} } = $manifest;
 
-        # Expand workers into separate service entries
+        # Workers inherit everything from the parent manifest, then override
+        # the bits that make them a worker (own name/entry, no health probe).
         my $workers = $manifest->{workers} // {};
         my ($group) = split /\./, $manifest->{name}, 2;
         for my $worker_name (keys %$workers) {
-            my $w = $workers->{$worker_name};
             my $full_name = "$group.$worker_name";
             $services{$full_name} = {
-                name         => $full_name,
-                entry        => $w->{cmd},
-                runner       => 'script',
-                health       => undef,
-                repo         => $manifest->{repo},
-                perl         => $manifest->{perl},
-                branch       => $manifest->{branch},
-                targets      => $manifest->{targets},
-                env_required => $manifest->{env_required},
-                env_optional => $manifest->{env_optional},
-                apt_deps     => $manifest->{apt_deps},
-                _parent      => $manifest->{name},
+                %$manifest,
+                name    => $full_name,
+                entry   => $workers->{$worker_name}{cmd},
+                runner  => 'script',
+                health  => undef,
+                workers => undef,
+                _parent => $manifest->{name},
             };
         }
     }

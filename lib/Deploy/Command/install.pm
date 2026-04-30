@@ -227,28 +227,38 @@ sub run ($self, @args) {
 
     # --- Nginx ---
     if ($host ne 'localhost' && $port) {
-        say "  Setting up nginx for $host -> :$port...";
         $self->nginx->transport($transport);
-        my $nginx_result = $self->nginx->setup($name);
-        # Verify nginx is OK
-        my $nginx_ok = 1;
-        for my $step (@{ $nginx_result->{steps} // [] }) {
-            my $s = $self->step_ok($step);
-            unless ($s) {
-                say "  [FAIL] nginx $step->{step}";
-                $nginx_ok = 0;
-                last;
-            }
-        }
-        if ($nginx_ok) {
-            say "  [OK] nginx";
+
+        # Skip the regen if a working site already exists — a hand-edited
+        # SSL config on live should not be silently clobbered by re-installs.
+        my $enabled_check = $transport->run("test -L /etc/nginx/sites-enabled/$host && echo OK");
+        my $already_enabled = ($enabled_check->{output} // '') =~ /OK/;
+        my $test = $already_enabled ? $self->nginx->test : { ok => 0 };
+
+        if ($already_enabled && $test->{ok}) {
+            say "  [SKIP] nginx already configured for $host (use '321 nginx $name $target' to regenerate)";
         } else {
-            say "";
-            say "  Next: check nginx config:";
-            say "    ssh $ssh_target";
-            say "    sudo nginx -t";
-            say "  Then re-run: 321 install $name $target";
-            return;
+            say "  Setting up nginx for $host -> :$port...";
+            my $nginx_result = $self->nginx->setup($name);
+            my $nginx_ok = 1;
+            for my $step (@{ $nginx_result->{steps} // [] }) {
+                my $s = $self->step_ok($step);
+                unless ($s) {
+                    say "  [FAIL] nginx $step->{step}";
+                    $nginx_ok = 0;
+                    last;
+                }
+            }
+            if ($nginx_ok) {
+                say "  [OK] nginx";
+            } else {
+                say "";
+                say "  Next: check nginx config:";
+                say "    ssh $ssh_target";
+                say "    sudo nginx -t";
+                say "  Then re-run: 321 install $name $target";
+                return;
+            }
         }
 
         # --- SSL ---
@@ -257,8 +267,11 @@ sub run ($self, @args) {
         my $cert = $self->nginx->acquire_cert($name);
         if ($cert->{status} eq 'ok') {
             say "  [OK] ssl ($provider)";
-            $self->nginx->generate($name);
-            $self->nginx->reload;
+            # Only regen+reload if we owned the nginx config in this run
+            unless ($already_enabled && $test->{ok}) {
+                $self->nginx->generate($name);
+                $self->nginx->reload;
+            }
         } else {
             say "  [SKIP] $provider failed - DNS may not be pointed yet";
             say "";
