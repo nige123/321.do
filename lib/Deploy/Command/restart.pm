@@ -13,6 +13,7 @@ sub run ($self, @args) {
 
     for my $name (@names) {
         my $transport = $self->transport_for($name, $target);
+        $self->ensure_fresh_ubic($name, $transport);
         my $svc_mgr = $self->svc_mgr;
         $svc_mgr->transport($transport);
         my $r = $svc_mgr->restart($name);

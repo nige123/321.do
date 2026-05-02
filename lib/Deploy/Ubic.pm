@@ -46,6 +46,23 @@ sub generate ($self, $name) {
     return { name => $name, status => 'ok', path => "$file" };
 }
 
+sub stale ($self, $name) {
+    return 0 if $self->remote_home;  # remote: caller drives via deploy flow
+    my $svc = $self->config->service($name) or return 0;
+    my $repo = $svc->{repo} or return 0;
+    my $manifest = path($repo, '321.yml');
+    return 0 unless $manifest->exists;
+
+    my $ubic_file = $self->_ubic_file_path($name);
+    return 1 unless $ubic_file->exists;
+    return $manifest->stat->mtime > $ubic_file->stat->mtime;
+}
+
+sub regenerate_if_stale ($self, $name) {
+    return undef unless $self->stale($name);
+    return $self->generate($name);
+}
+
 sub upload_remote ($self, $transport, $name, $gen) {
     my ($group, $svc_name) = split /\./, $name, 2;
     $transport->run("mkdir -p ~/ubic/service/$group");

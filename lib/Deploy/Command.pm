@@ -169,6 +169,12 @@ dev:
 YAML
 }
 
+sub ensure_fresh_ubic ($self, $name, $transport) {
+    return if $transport && $transport->isa('Deploy::SSH');
+    my $r = $self->ubic->regenerate_if_stale($name);
+    say "  [regenerated ubic for $name]" if $r && $r->{status} eq 'ok';
+}
+
 sub check_port ($self, $port, $transport) {
     return 0 unless $port && $port ne '?';
     # Any HTTP response means the socket is alive; -f would falsely fail

@@ -23,6 +23,7 @@ sub run ($self, @args) {
 
 sub _start_one ($self, $name, $target) {
     my $transport = $self->transport_for($name, $target);
+    $self->ensure_fresh_ubic($name, $transport);
     my $svc  = $self->config->service($name);
     my $port = $svc->{port} // '?';
     my $url  = $self->service_url($svc);
